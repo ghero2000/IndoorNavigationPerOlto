@@ -5,10 +5,12 @@ import android.graphics.BitmapFactory;
 import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.util.Log;
+import android.util.Pair;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
+import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 
@@ -40,6 +42,8 @@ public class MainActivity extends AppCompatActivity {
     private TextInputEditText startPoint;
 
     private TextInputEditText endPoint;
+
+    private float pointX = -1, pointY = -1;
 
     /**
      * Metodo onCreate per la creazione dell'activity.
@@ -73,6 +77,7 @@ public class MainActivity extends AppCompatActivity {
         mapImage.setImageBitmap(mapDrawer.getMapBitmap());
         mapImage.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
 
+        float[] touchPoint = new float[2];
 
         Graph graph = new Graph(mapBitmap);
 
@@ -143,7 +148,7 @@ public class MainActivity extends AppCompatActivity {
 
         Graph.Node nodeA = graph.getNode("A");
 
-
+        checkPoint(mapImage, touchPoint, graph);
 
         Button drawBtn;
 
@@ -181,7 +186,52 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
+    public void checkPoint(PhotoView mapImage, float[] touchPoint, Graph graph){
+        mapImage.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View view, MotionEvent event) {
+                pointX = -1;
+                pointY = -1;
+                float imgX = imageX(event.getX(),  mapImage);
+                float imgY = imageY(event.getY(), mapImage);
 
+                if (event.getAction() == MotionEvent.ACTION_DOWN) {
+                    if (pointX == -1 && pointY == -1) {
+                        // Imposta il punto di partenza
+                        pointX = imgX;
+                        pointY = imgY;
+                        touchPoint[0] = pointX;
+                        touchPoint[1] = pointY;
+                        Log.d("giova", String.valueOf(touchPoint[0]));
+                        if (touchPoint[0] != -1 && touchPoint[1] != -1) {
+                            Graph.Node node = graph.getNode("6");
+                            if (Math.abs(touchPoint[0] - node.getX()) <= 100) {
+                                if (Math.abs(touchPoint[1] - node.getY()) <= 100) {
+                                    Toast.makeText(MainActivity.this, "6 Node", Toast.LENGTH_SHORT).show();
+                                }
+                            }
+                        }
+                    }
+                }
+
+                return true;
+            }
+        });
+    }
+
+    private float imageX(float touchX, PhotoView mapImage) {
+        float viewWidth = mapImage.getWidth();
+        float bitmapWidth = mapBitmap.getWidth();
+        float scaleFactor = Math.min((float) viewWidth / bitmapWidth, (float) mapImage.getHeight() / mapBitmap.getHeight());
+        return (touchX - (viewWidth - bitmapWidth * scaleFactor) / 2) / scaleFactor;
+    }
+
+    private float imageY(float touchY, PhotoView mapImage) {
+        float viewHeight = mapImage.getHeight();
+        float bitmapHeight = mapBitmap.getHeight();
+        float scaleFactor = Math.min((float) mapImage.getWidth() / mapBitmap.getWidth(), (float) viewHeight / bitmapHeight);
+        return (touchY - (viewHeight - bitmapHeight * scaleFactor) / 2) / scaleFactor;
+    }
 
 }
 
