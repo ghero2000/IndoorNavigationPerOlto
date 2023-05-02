@@ -85,7 +85,11 @@ public class Graph {
 
         while (!unvisited.isEmpty()) {                                                       // finchè non è vuoto
             String current = findClosestNode(distances, unvisited, roomType);         // estraizone del nodo con peso minore ("il più vicino")
-            if (current.equals(end)) {
+            try {
+                if (current.equals(end)) {
+                    break;
+                }
+            }catch(NullPointerException e) {
                 break;
             }
 

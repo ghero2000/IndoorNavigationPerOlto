@@ -9,7 +9,9 @@ import android.util.Pair;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Button;
+import android.widget.CompoundButton;
 import android.widget.ImageView;
+import android.widget.Switch;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -45,6 +47,10 @@ public class MainActivity extends AppCompatActivity {
 
     private float pointX = -1, pointY = -1;
 
+    private Switch aSwitch;
+
+    private String stairs = "";
+
     /**
      * Metodo onCreate per la creazione dell'activity.
      * Inizializza le variabili e carica l'immagine della planimetria.
@@ -59,6 +65,7 @@ public class MainActivity extends AppCompatActivity {
 
         startPoint = findViewById(R.id.starPoint);
         endPoint = findViewById(R.id.endPoint);
+        aSwitch = findViewById(R.id.switch1);
 
         map = getResources().getDrawable(R.drawable.planimetria);
         mapImage = findViewById(R.id.map_image);
@@ -154,11 +161,21 @@ public class MainActivity extends AppCompatActivity {
 
         drawBtn = findViewById(R.id.drawBtn);
 
+        aSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                if(aSwitch.isChecked())
+                    stairs = "stairs";
+                else
+                    stairs = "";
+            }
+        });
+
         drawBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 clearPath();
-                disegnaPercorso(graph.findShortestPath(startPoint.getText().toString(), endPoint.getText().toString(), "stairs"));
+                disegnaPercorso(graph.findShortestPath(startPoint.getText().toString(), endPoint.getText().toString(), stairs));
             }
         });
 
@@ -204,11 +221,18 @@ public class MainActivity extends AppCompatActivity {
                         touchPoint[1] = pointY;
                         Log.d("giova", String.valueOf(touchPoint[0]));
                         if (touchPoint[0] != -1 && touchPoint[1] != -1) {
-                            Graph.Node node = graph.getNode("6");
-                            if (Math.abs(touchPoint[0] - node.getX()) <= 100) {
-                                if (Math.abs(touchPoint[1] - node.getY()) <= 100) {
-                                    Toast.makeText(MainActivity.this, "6 Node", Toast.LENGTH_SHORT).show();
+                            String id = "1";
+                            while(graph.getNode(id) != null) {
+                                Graph.Node node = graph.getNode(id);
+                                if (Math.abs(touchPoint[0] - node.getX()) <= 200) {
+                                    if (Math.abs(touchPoint[1] - node.getY()) <= 200) {
+                                        Toast.makeText(MainActivity.this, "Node", Toast.LENGTH_SHORT).show();
+                                        break;
+                                    }
                                 }
+                                int a = Integer.parseInt(id);
+                                a++;
+                                id = String.valueOf(a);
                             }
                         }
                     }
