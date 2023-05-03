@@ -1,13 +1,11 @@
 package com.example.indoornavigation;
 
-import static android.view.KeyEvent.ACTION_DOWN;
-
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Matrix;
 import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.util.Log;
-import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Button;
 import android.widget.CompoundButton;
@@ -20,7 +18,6 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.github.chrisbanes.photoview.OnPhotoTapListener;
 import com.github.chrisbanes.photoview.OnViewTapListener;
 import com.github.chrisbanes.photoview.PhotoView;
-import com.github.chrisbanes.photoview.PhotoViewAttacher;
 import com.google.android.material.textfield.TextInputEditText;
 
 import java.util.List;
@@ -190,7 +187,8 @@ public class MainActivity extends AppCompatActivity {
         });
 
         Log.d("Coordinate", "Width: "+  String.valueOf(mapBitmap.getWidth()) + "  Height: " + String.valueOf(mapBitmap.getHeight()));
-        checkPoint(mapImage, touchPoint, graph);
+
+        checkPoint(mapImage, touchPoint, graph, mapImage.getScale());
     }
 
     /**
@@ -211,20 +209,23 @@ public class MainActivity extends AppCompatActivity {
         mapImage.invalidate(); // Forza il ridisegno della PhotoView
     }
 
-    public void checkPoint(PhotoView mapImage, float[] touchPoint, Graph graph){
+    public void checkPoint(PhotoView mapImage, float[] touchPoint, Graph graph, float scale){
         mapImage.setOnViewTapListener(new OnViewTapListener() {
             @Override
             public void onViewTap(View view, float x, float y) {
                 touchPoint[0] = imageX(x, mapImage);
                 touchPoint[1] = imageY(y, mapImage);
+                touchPoint[0] = transformX(touchPoint[0], mapImage);
+                touchPoint[1] = transformY(touchPoint[1], mapImage);
                 Log.d("giova", String.valueOf(touchPoint[0]));
+                Log.d("giova", String.valueOf(touchPoint[1]));
                 if (touchPoint[0] != -1 && touchPoint[1] != -1) {
                     String id = "1";
                     while (graph.getNode(id) != null) {
                         Graph.Node node = graph.getNode(id);
                         if (Math.abs(touchPoint[0] - node.getX()) <= 200) {
                             if (Math.abs(touchPoint[1] - node.getY()) <= 200) {
-                                Toast.makeText(MainActivity.this, "Node", Toast.LENGTH_SHORT).show();
+                                Toast.makeText(MainActivity.this, "Node"+id, Toast.LENGTH_SHORT).show();
                                 break;
                             }
                         }
@@ -236,15 +237,36 @@ public class MainActivity extends AppCompatActivity {
             }
         });
     }
-
     private float imageX(float touchX, PhotoView mapImage) {
+        Matrix matrix = new Matrix();
+        mapImage.getSuppMatrix(matrix);
+        float[] matrixValues = new float[9];
+        matrix.getValues(matrixValues);
+        float scaleFactor = matrixValues[Matrix.MSCALE_X];
+        float transX = matrixValues[Matrix.MTRANS_X];
+        float imageX = (touchX - transX) / scaleFactor;
+        return imageX;
+    }
+
+    private float imageY(float touchY, PhotoView mapImage) {
+        Matrix matrix = new Matrix();
+        mapImage.getSuppMatrix(matrix);
+        float[] matrixValues = new float[9];
+        matrix.getValues(matrixValues);
+        float scaleFactor = matrixValues[Matrix.MSCALE_Y];
+        float transY = matrixValues[Matrix.MTRANS_Y];
+        float imageY = (touchY - transY) / scaleFactor;
+        return imageY;
+    }
+
+    private float transformX(float touchX, PhotoView mapImage) {
         float viewWidth = mapImage.getWidth();
         float bitmapWidth = mapBitmap.getWidth();
         float scaleFactor = Math.min((float) viewWidth / bitmapWidth, (float) mapImage.getHeight() / mapBitmap.getHeight());
         return (touchX - (viewWidth - bitmapWidth * scaleFactor) / 2) / scaleFactor;
     }
 
-    private float imageY(float touchY, PhotoView mapImage) {
+    private float transformY(float touchY, PhotoView mapImage) {
         float viewHeight = mapImage.getHeight();
         float bitmapHeight = mapBitmap.getHeight();
         float scaleFactor = Math.min((float) mapImage.getWidth() / mapBitmap.getWidth(), (float) viewHeight / bitmapHeight);
