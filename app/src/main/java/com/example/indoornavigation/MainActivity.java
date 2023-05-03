@@ -11,11 +11,9 @@ import android.widget.Button;
 import android.widget.CompoundButton;
 import android.widget.ImageView;
 import android.widget.Switch;
-import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 
-import com.github.chrisbanes.photoview.OnPhotoTapListener;
 import com.github.chrisbanes.photoview.OnViewTapListener;
 import com.github.chrisbanes.photoview.PhotoView;
 import com.google.android.material.textfield.TextInputEditText;
@@ -188,7 +186,9 @@ public class MainActivity extends AppCompatActivity {
 
         Log.d("Coordinate", "Width: "+  String.valueOf(mapBitmap.getWidth()) + "  Height: " + String.valueOf(mapBitmap.getHeight()));
 
-        checkPoint(mapImage, touchPoint, graph, mapImage.getScale());
+        int[] testo = new int[1];
+        testo[0] = 1;
+        checkPoint(mapImage, touchPoint, graph, testo);
     }
 
     /**
@@ -209,7 +209,7 @@ public class MainActivity extends AppCompatActivity {
         mapImage.invalidate(); // Forza il ridisegno della PhotoView
     }
 
-    public void checkPoint(PhotoView mapImage, float[] touchPoint, Graph graph, float scale){
+    public void checkPoint(PhotoView mapImage, float[] touchPoint, Graph graph, int[] testo){
         mapImage.setOnViewTapListener(new OnViewTapListener() {
             @Override
             public void onViewTap(View view, float x, float y) {
@@ -225,7 +225,17 @@ public class MainActivity extends AppCompatActivity {
                         Graph.Node node = graph.getNode(id);
                         if (Math.abs(touchPoint[0] - node.getX()) <= 200) {
                             if (Math.abs(touchPoint[1] - node.getY()) <= 200) {
-                                Toast.makeText(MainActivity.this, "Node"+id, Toast.LENGTH_SHORT).show();
+                                //Toast.makeText(MainActivity.this, "Node"+id, Toast.LENGTH_SHORT).show();
+                                if(testo[0] == 1) {
+                                    startPoint.setText(id);
+                                    testo[0]++;
+                                    break;
+                                }
+                                if(testo[0] == 2) {
+                                    endPoint.setText(id);
+                                    testo[0]--;
+                                    break;
+                                }
                                 break;
                             }
                         }
