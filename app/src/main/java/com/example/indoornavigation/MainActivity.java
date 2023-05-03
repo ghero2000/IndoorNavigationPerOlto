@@ -1,11 +1,12 @@
 package com.example.indoornavigation;
 
+import static android.view.KeyEvent.ACTION_DOWN;
+
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.util.Log;
-import android.util.Pair;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Button;
@@ -16,7 +17,10 @@ import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.github.chrisbanes.photoview.OnPhotoTapListener;
+import com.github.chrisbanes.photoview.OnViewTapListener;
 import com.github.chrisbanes.photoview.PhotoView;
+import com.github.chrisbanes.photoview.PhotoViewAttacher;
 import com.google.android.material.textfield.TextInputEditText;
 
 import java.util.List;
@@ -31,7 +35,7 @@ import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
     // Un'istanza di PhotoView che visualizza l'immagine della planimetria
-    private PhotoView mapImage;
+    PhotoView mapImage;
 
     // Un'istanza di Bitmap che contiene l'immagine della planimetria
     private Bitmap mapBitmap;
@@ -40,6 +44,8 @@ public class MainActivity extends AppCompatActivity {
     private MapDrawer mapDrawer;
 
     private Drawable map;
+    private float mInitialDistance;
+    private boolean mIsScaling;
 
     private TextInputEditText startPoint;
 
@@ -50,6 +56,11 @@ public class MainActivity extends AppCompatActivity {
     private Switch aSwitch;
 
     private String stairs = "";
+
+    private boolean touch;
+    private float mLastTouchX = 0.0F;
+    private float mLastTouchY = 0.0F;
+    private float mScaleFactor = 1.f;
 
     /**
      * Metodo onCreate per la creazione dell'activity.
@@ -68,8 +79,6 @@ public class MainActivity extends AppCompatActivity {
         aSwitch = findViewById(R.id.switch1);
 
         map = getResources().getDrawable(R.drawable.planimetria);
-        mapImage = findViewById(R.id.map_image);
-        mapImage.setImageDrawable(map);
         mapBitmap = BitmapFactory.decodeResource(getResources(),
                 R.drawable.planimetria);
 
@@ -81,8 +90,6 @@ public class MainActivity extends AppCompatActivity {
         }
 
         mapDrawer = new MapDrawer(mapBitmap);
-        mapImage.setImageBitmap(mapDrawer.getMapBitmap());
-        mapImage.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
 
         float[] touchPoint = new float[2];
 
@@ -152,14 +159,17 @@ public class MainActivity extends AppCompatActivity {
 
         graph.addEdge("9", "1.1", 1);
 
-
         Graph.Node nodeA = graph.getNode("A");
-
-        checkPoint(mapImage, touchPoint, graph);
 
         Button drawBtn;
 
         drawBtn = findViewById(R.id.drawBtn);
+
+        mapImage = findViewById(R.id.map_image);
+        mapImage.setImageDrawable(map);
+        mapImage.setImageBitmap(mapDrawer.getMapBitmap());
+        mapImage.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
+        //PhotoView mapImage2 = mapImage;
 
         aSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
@@ -180,8 +190,7 @@ public class MainActivity extends AppCompatActivity {
         });
 
         Log.d("Coordinate", "Width: "+  String.valueOf(mapBitmap.getWidth()) + "  Height: " + String.valueOf(mapBitmap.getHeight()));
-
-
+        checkPoint(mapImage, touchPoint, graph);
     }
 
     /**
@@ -202,43 +211,28 @@ public class MainActivity extends AppCompatActivity {
         mapImage.invalidate(); // Forza il ridisegno della PhotoView
     }
 
-
     public void checkPoint(PhotoView mapImage, float[] touchPoint, Graph graph){
-        mapImage.setOnTouchListener(new View.OnTouchListener() {
+        mapImage.setOnViewTapListener(new OnViewTapListener() {
             @Override
-            public boolean onTouch(View view, MotionEvent event) {
-                pointX = -1;
-                pointY = -1;
-                float imgX = imageX(event.getX(),  mapImage);
-                float imgY = imageY(event.getY(), mapImage);
-
-                if (event.getAction() == MotionEvent.ACTION_DOWN) {
-                    if (pointX == -1 && pointY == -1) {
-                        // Imposta il punto di partenza
-                        pointX = imgX;
-                        pointY = imgY;
-                        touchPoint[0] = pointX;
-                        touchPoint[1] = pointY;
-                        Log.d("giova", String.valueOf(touchPoint[0]));
-                        if (touchPoint[0] != -1 && touchPoint[1] != -1) {
-                            String id = "1";
-                            while(graph.getNode(id) != null) {
-                                Graph.Node node = graph.getNode(id);
-                                if (Math.abs(touchPoint[0] - node.getX()) <= 200) {
-                                    if (Math.abs(touchPoint[1] - node.getY()) <= 200) {
-                                        Toast.makeText(MainActivity.this, "Node", Toast.LENGTH_SHORT).show();
-                                        break;
-                                    }
-                                }
-                                int a = Integer.parseInt(id);
-                                a++;
-                                id = String.valueOf(a);
+            public void onViewTap(View view, float x, float y) {
+                touchPoint[0] = imageX(x, mapImage);
+                touchPoint[1] = imageY(y, mapImage);
+                Log.d("giova", String.valueOf(touchPoint[0]));
+                if (touchPoint[0] != -1 && touchPoint[1] != -1) {
+                    String id = "1";
+                    while (graph.getNode(id) != null) {
+                        Graph.Node node = graph.getNode(id);
+                        if (Math.abs(touchPoint[0] - node.getX()) <= 200) {
+                            if (Math.abs(touchPoint[1] - node.getY()) <= 200) {
+                                Toast.makeText(MainActivity.this, "Node", Toast.LENGTH_SHORT).show();
+                                break;
                             }
                         }
+                        int a = Integer.parseInt(id);
+                        a++;
+                        id = String.valueOf(a);
                     }
                 }
-
-                return true;
             }
         });
     }
