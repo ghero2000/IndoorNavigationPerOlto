@@ -2,7 +2,6 @@ package com.example.indoornavigation;
 
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.graphics.Matrix;
 import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.util.Log;
@@ -11,6 +10,7 @@ import android.widget.Button;
 import android.widget.CompoundButton;
 import android.widget.ImageView;
 import android.widget.Switch;
+import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 
@@ -18,7 +18,6 @@ import com.github.chrisbanes.photoview.OnViewTapListener;
 import com.github.chrisbanes.photoview.PhotoView;
 import com.google.android.material.textfield.TextInputEditText;
 
-import java.util.LinkedList;
 import java.util.List;
 
 
@@ -61,6 +60,8 @@ public class MainActivity extends AppCompatActivity {
 
     private Button drawBtn;
 
+    private TouchTransformer touchTransformer;
+
     /**
      * Metodo onCreate per la creazione dell'activity.
      * Inizializza le variabili e carica l'immagine della planimetria.
@@ -79,12 +80,10 @@ public class MainActivity extends AppCompatActivity {
 
         map = getResources().getDrawable(R.drawable.planimetria);
         drawBtn = findViewById(R.id.drawBtn);
-        mapImage = findViewById(R.id.map_image);
-        mapImage.setImageDrawable(map);
-        mapImage.setImageBitmap(mapDrawer.getMapBitmap());
-        mapImage.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
         mapBitmap = BitmapFactory.decodeResource(getResources(),
                 R.drawable.planimetria);
+
+        touchTransformer = new TouchTransformer();
 
         if (mapBitmap == null) {
             Log.e("MainActivity", "Failed to load map image. " +
@@ -168,6 +167,11 @@ public class MainActivity extends AppCompatActivity {
 
         Graph.Node nodeA = graph.getNode("A");
 
+        mapImage = findViewById(R.id.map_image);
+        mapImage.setImageDrawable(map);
+        mapImage.setImageBitmap(mapDrawer.getMapBitmap());
+        mapImage.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
+
         aSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
@@ -192,8 +196,7 @@ public class MainActivity extends AppCompatActivity {
 
         int[] testo = new int[1];
         testo[0] = 1;
-        checkPoint(mapImage, graph, testo);
-
+        checkPoint(mapImage, graph, testo, mapBitmap, touchTransformer);
 
         Button stepBtn = findViewById(R.id.stepBtn);
 
@@ -225,76 +228,18 @@ public class MainActivity extends AppCompatActivity {
         mapImage.invalidate(); // Forza il ridisegno della PhotoView
     }
 
-    public void checkPoint(PhotoView mapImage, Graph graph, int[] testo){
+    public void checkPoint(PhotoView mapImage, Graph graph, int[] testo, Bitmap mapBitmap, TouchTransformer touchTransformer){
         mapImage.setOnViewTapListener(new OnViewTapListener() {
             @Override
             public void onViewTap(View view, float x, float y) {
-                float pointX = imageX(x, mapImage);
-                float pointY = imageY(y, mapImage);
-                pointX = transformX(pointX, mapImage);
-                pointY = transformY(pointY, mapImage);
-                Log.d("giova", String.valueOf(pointX));
-                Log.d("giova", String.valueOf(pointY));
-                String id = "1";
-                while (graph.getNode(id) != null) {
-                    Graph.Node node = graph.getNode(id);
-                    if (Math.abs(pointX - node.getX()) <= 200) {
-                        if (Math.abs(pointY - node.getY()) <= 200) {
-                            if(testo[0] == 1) {
-                                startPoint.setText(id);
-                                testo[0]++;
-                                break;
-                            }
-                            if(testo[0] == 2) {
-                                endPoint.setText(id);
-                                testo[0]--;
-                                break;
-                            }
-                            break;
-                        }
-                    }
-                    int a = Integer.parseInt(id);
-                    a++;
-                    id = String.valueOf(a);
-                }
+                float pointX = touchTransformer.transformX(x, mapImage, mapBitmap);
+                float pointY = touchTransformer.transformY(y, mapImage, mapBitmap);
+                indoorNav.checkNode(graph, testo, pointX, pointY, startPoint, endPoint);
             }
         });
     }
-    private float imageX(float touchX, PhotoView mapImage) {
-        Matrix matrix = new Matrix();
-        mapImage.getSuppMatrix(matrix);
-        float[] matrixValues = new float[9];
-        matrix.getValues(matrixValues);
-        float scaleFactor = matrixValues[Matrix.MSCALE_X];
-        float transX = matrixValues[Matrix.MTRANS_X];
-        float imageX = (touchX - transX) / scaleFactor;
-        return imageX;
-    }
 
-    private float imageY(float touchY, PhotoView mapImage) {
-        Matrix matrix = new Matrix();
-        mapImage.getSuppMatrix(matrix);
-        float[] matrixValues = new float[9];
-        matrix.getValues(matrixValues);
-        float scaleFactor = matrixValues[Matrix.MSCALE_Y];
-        float transY = matrixValues[Matrix.MTRANS_Y];
-        float imageY = (touchY - transY) / scaleFactor;
-        return imageY;
-    }
 
-    private float transformX(float touchX, PhotoView mapImage) {
-        float viewWidth = mapImage.getWidth();
-        float bitmapWidth = mapBitmap.getWidth();
-        float scaleFactor = Math.min((float) viewWidth / bitmapWidth, (float) mapImage.getHeight() / mapBitmap.getHeight());
-        return (touchX - (viewWidth - bitmapWidth * scaleFactor) / 2) / scaleFactor;
-    }
-
-    private float transformY(float touchY, PhotoView mapImage) {
-        float viewHeight = mapImage.getHeight();
-        float bitmapHeight = mapBitmap.getHeight();
-        float scaleFactor = Math.min((float) mapImage.getWidth() / mapBitmap.getWidth(), (float) viewHeight / bitmapHeight);
-        return (touchY - (viewHeight - bitmapHeight * scaleFactor) / 2) / scaleFactor;
-    }
 }
 
 

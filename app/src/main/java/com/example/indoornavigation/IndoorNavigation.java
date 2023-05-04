@@ -4,6 +4,7 @@ import android.content.Context;
 import android.widget.Toast;
 
 import com.github.chrisbanes.photoview.PhotoView;
+import com.google.android.material.textfield.TextInputEditText;
 
 import java.nio.MappedByteBuffer;
 import java.util.LinkedList;
@@ -43,6 +44,31 @@ public class IndoorNavigation {
 
         }
 
+    }
+
+    public void checkNode(Graph graph, int[] testo, float pointX, float pointY, TextInputEditText startPoint, TextInputEditText endPoint) {
+        String id = "1";
+        while (graph.getNode(id) != null) {
+            Graph.Node node = graph.getNode(id);
+            if (Math.abs(pointX - node.getX()) <= 200) {
+                if (Math.abs(pointY - node.getY()) <= 200) {
+                    if(testo[0] == 1) {
+                        startPoint.setText(id);
+                        testo[0]++;
+                        break;
+                    }
+                    if(testo[0] == 2) {
+                        endPoint.setText(id);
+                        testo[0]--;
+                        break;
+                    }
+                    break;
+                }
+            }
+            int a = Integer.parseInt(id);
+            a++;
+            id = String.valueOf(a);
+        }
     }
 
 }
