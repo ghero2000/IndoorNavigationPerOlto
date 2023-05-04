@@ -40,8 +40,6 @@ public class MainActivity extends AppCompatActivity {
     private MapDrawer mapDrawer;
 
     private Drawable map;
-    private float mInitialDistance;
-    private boolean mIsScaling;
 
     private TextInputEditText startPoint;
 
@@ -57,14 +55,11 @@ public class MainActivity extends AppCompatActivity {
 
     private List<Graph.Node> path;
 
-    private boolean touch;
-    private float mLastTouchX = 0.0F;
-    private float mLastTouchY = 0.0F;
-    private float mScaleFactor = 1.f;
-
     private int stepCount = 0;
 
     private IndoorNavigation indoorNav;
+
+    private Button drawBtn;
 
     /**
      * Metodo onCreate per la creazione dell'activity.
@@ -83,6 +78,11 @@ public class MainActivity extends AppCompatActivity {
         aSwitch = findViewById(R.id.switch1);
 
         map = getResources().getDrawable(R.drawable.planimetria);
+        drawBtn = findViewById(R.id.drawBtn);
+        mapImage = findViewById(R.id.map_image);
+        mapImage.setImageDrawable(map);
+        mapImage.setImageBitmap(mapDrawer.getMapBitmap());
+        mapImage.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
         mapBitmap = BitmapFactory.decodeResource(getResources(),
                 R.drawable.planimetria);
 
@@ -97,7 +97,7 @@ public class MainActivity extends AppCompatActivity {
 
         indoorNav = new IndoorNavigation(mapDrawer, getApplicationContext());
 
-        float[] touchPoint = new float[2];
+        //float[] touchPoint = new float[2];
 
         graph = new Graph(mapBitmap);
         path = null;
@@ -168,16 +168,6 @@ public class MainActivity extends AppCompatActivity {
 
         Graph.Node nodeA = graph.getNode("A");
 
-        Button drawBtn;
-
-        drawBtn = findViewById(R.id.drawBtn);
-
-        mapImage = findViewById(R.id.map_image);
-        mapImage.setImageDrawable(map);
-        mapImage.setImageBitmap(mapDrawer.getMapBitmap());
-        mapImage.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
-        //PhotoView mapImage2 = mapImage;
-
         aSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
@@ -202,7 +192,7 @@ public class MainActivity extends AppCompatActivity {
 
         int[] testo = new int[1];
         testo[0] = 1;
-        checkPoint(mapImage, touchPoint, graph, testo);
+        checkPoint(mapImage, graph, testo);
 
 
         Button stepBtn = findViewById(R.id.stepBtn);
@@ -215,8 +205,6 @@ public class MainActivity extends AppCompatActivity {
                 stepCount ++;
             }
         });
-
-
     }
 
     /**
@@ -237,40 +225,37 @@ public class MainActivity extends AppCompatActivity {
         mapImage.invalidate(); // Forza il ridisegno della PhotoView
     }
 
-    public void checkPoint(PhotoView mapImage, float[] touchPoint, Graph graph, int[] testo){
+    public void checkPoint(PhotoView mapImage, Graph graph, int[] testo){
         mapImage.setOnViewTapListener(new OnViewTapListener() {
             @Override
             public void onViewTap(View view, float x, float y) {
-                touchPoint[0] = imageX(x, mapImage);
-                touchPoint[1] = imageY(y, mapImage);
-                touchPoint[0] = transformX(touchPoint[0], mapImage);
-                touchPoint[1] = transformY(touchPoint[1], mapImage);
-                Log.d("giova", String.valueOf(touchPoint[0]));
-                Log.d("giova", String.valueOf(touchPoint[1]));
-                if (touchPoint[0] != -1 && touchPoint[1] != -1) {
-                    String id = "1";
-                    while (graph.getNode(id) != null) {
-                        Graph.Node node = graph.getNode(id);
-                        if (Math.abs(touchPoint[0] - node.getX()) <= 200) {
-                            if (Math.abs(touchPoint[1] - node.getY()) <= 200) {
-                                //Toast.makeText(MainActivity.this, "Node"+id, Toast.LENGTH_SHORT).show();
-                                if(testo[0] == 1) {
-                                    startPoint.setText(id);
-                                    testo[0]++;
-                                    break;
-                                }
-                                if(testo[0] == 2) {
-                                    endPoint.setText(id);
-                                    testo[0]--;
-                                    break;
-                                }
+                float pointX = imageX(x, mapImage);
+                float pointY = imageY(y, mapImage);
+                pointX = transformX(pointX, mapImage);
+                pointY = transformY(pointY, mapImage);
+                Log.d("giova", String.valueOf(pointX));
+                Log.d("giova", String.valueOf(pointY));
+                String id = "1";
+                while (graph.getNode(id) != null) {
+                    Graph.Node node = graph.getNode(id);
+                    if (Math.abs(pointX - node.getX()) <= 200) {
+                        if (Math.abs(pointY - node.getY()) <= 200) {
+                            if(testo[0] == 1) {
+                                startPoint.setText(id);
+                                testo[0]++;
                                 break;
                             }
+                            if(testo[0] == 2) {
+                                endPoint.setText(id);
+                                testo[0]--;
+                                break;
+                            }
+                            break;
                         }
-                        int a = Integer.parseInt(id);
-                        a++;
-                        id = String.valueOf(a);
                     }
+                    int a = Integer.parseInt(id);
+                    a++;
+                    id = String.valueOf(a);
                 }
             }
         });
@@ -310,11 +295,6 @@ public class MainActivity extends AppCompatActivity {
         float scaleFactor = Math.min((float) mapImage.getWidth() / mapBitmap.getWidth(), (float) viewHeight / bitmapHeight);
         return (touchY - (viewHeight - bitmapHeight * scaleFactor) / 2) / scaleFactor;
     }
-
-
-
-
-
 }
 
 
