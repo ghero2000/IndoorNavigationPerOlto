@@ -18,6 +18,7 @@ import com.github.chrisbanes.photoview.OnViewTapListener;
 import com.github.chrisbanes.photoview.PhotoView;
 import com.google.android.material.textfield.TextInputEditText;
 
+import java.util.LinkedList;
 import java.util.List;
 
 
@@ -52,10 +53,18 @@ public class MainActivity extends AppCompatActivity {
 
     private String stairs = "";
 
+    private Graph graph;
+
+    private List<Graph.Node> path;
+
     private boolean touch;
     private float mLastTouchX = 0.0F;
     private float mLastTouchY = 0.0F;
     private float mScaleFactor = 1.f;
+
+    private int stepCount = 0;
+
+    private IndoorNavigation indoorNav;
 
     /**
      * Metodo onCreate per la creazione dell'activity.
@@ -86,9 +95,12 @@ public class MainActivity extends AppCompatActivity {
 
         mapDrawer = new MapDrawer(mapBitmap);
 
+        indoorNav = new IndoorNavigation(mapDrawer, getApplicationContext());
+
         float[] touchPoint = new float[2];
 
-        Graph graph = new Graph(mapBitmap);
+        graph = new Graph(mapBitmap);
+        path = null;
 
         graph.addNode("1", (float) 2020.6055 / 3520, (float) 1991.6936 / 4186,  "atrium");
         graph.addNode("1.1", (float) 2278.0957 / 3520, (float) 1913.4905 / 4186,  "atrium");
@@ -180,7 +192,9 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View view) {
                 clearPath();
-                disegnaPercorso(graph.findShortestPath(startPoint.getText().toString(), endPoint.getText().toString(), stairs));
+                path = graph.findShortestPath(startPoint.getText().toString(), endPoint.getText().toString(), stairs);
+                disegnaPercorso(path);
+                stepCount = 0;
             }
         });
 
@@ -189,6 +203,20 @@ public class MainActivity extends AppCompatActivity {
         int[] testo = new int[1];
         testo[0] = 1;
         checkPoint(mapImage, touchPoint, graph, testo);
+
+
+        Button stepBtn = findViewById(R.id.stepBtn);
+
+        stepBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                clearPath();
+                indoorNav.stepNavigation (path, mapImage, stepCount);
+                stepCount ++;
+            }
+        });
+
+
     }
 
     /**
@@ -199,11 +227,11 @@ public class MainActivity extends AppCompatActivity {
      * @param nodes Lista di nodi che rappresentano il percorso da disegnare
      */
     private void disegnaPercorso(List<Graph.Node> nodes) {
-        mapDrawer.drawPath(nodes);
+        mapDrawer.drawPath(nodes, mapImage, true);
         mapImage.invalidate();
     }
 
-    public void clearPath() {
+    public void clearPath(){
         mapDrawer.resetMap(); // Aggiungi questa riga per ripristinare la mappa nel MapDrawer
         mapImage.setImageBitmap(mapDrawer.getMapBitmap()); // Imposta la nuova mappa ripristinata
         mapImage.invalidate(); // Forza il ridisegno della PhotoView
@@ -282,6 +310,10 @@ public class MainActivity extends AppCompatActivity {
         float scaleFactor = Math.min((float) mapImage.getWidth() / mapBitmap.getWidth(), (float) viewHeight / bitmapHeight);
         return (touchY - (viewHeight - bitmapHeight * scaleFactor) / 2) / scaleFactor;
     }
+
+
+
+
 
 }
 
