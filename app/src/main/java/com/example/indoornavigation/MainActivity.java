@@ -447,6 +447,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
             degreeTextView.setText(String.format(Locale.getDefault(), "%.0f°", degrees));
             compassImageView.setRotation(-degrees);
+            mapImage.setRotation(-degrees);
         }
     }
 
