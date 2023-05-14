@@ -9,17 +9,23 @@
     tools:context=".MainActivity">
 
 
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
     <androidx.cardview.widget.CardView
+        android:layout_marginLeft="5dp"
+        android:layout_marginRight="5dp"
+        android:layout_marginTop="5dp"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_weight="0.001"
-        app:cardBackgroundColor="#9B5D5D"
+        app:cardBackgroundColor="#8C4444"
         app:cardCornerRadius="30dp">
 
 
         <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
+            android:layout_height="270dp"
             android:orientation="horizontal">
 
             <androidx.cardview.widget.CardView
@@ -53,7 +59,7 @@
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/starPoint"
                             android:layout_width="200dp"
-                            android:layout_height="53dp"
+                            android:layout_height="40dp"
                             android:hint="start point"
                             android:outlineProvider="none" />
 
@@ -72,7 +78,7 @@
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/endPoint"
                             android:layout_width="200dp"
-                            android:layout_height="53dp"
+                            android:layout_height="40dp"
                             android:layout_marginTop="10dp"
                             android:layout_weight="1"
                             android:hint="end point"
@@ -80,21 +86,37 @@
                     </com.google.android.material.textfield.TextInputLayout>
 
                     <Switch
+                        android:textColor="@color/white"
+                        android:layout_marginTop="10dp"
+                        android:trackTint="@color/white"
                         android:id="@+id/switch1"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
+                        android:layout_width="220dp"
+                        android:layout_height="40dp"
                         android:layout_weight="1"
                         android:minHeight="48dp"
                         android:text="Avoid Staircase" />
 
                     <Switch
+                        android:textColor="@color/white"
+                        android:trackTint="@color/white"
                         android:id="@+id/switch2"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
+                        android:layout_width="220dp"
+                        android:layout_height="40dp"
                         android:layout_weight="1"
                         android:minHeight="48dp"
                         android:text="Avoid Unavailable Paths"
-                        android:checked="true"/>
+                        android:checked="false"/>
+
+                    <Switch
+                        android:textColor="@color/white"
+                        android:trackTint="@color/white"
+                        android:id="@+id/switch3"
+                        android:layout_width="220dp"
+                        android:layout_height="40dp"
+                        android:layout_weight="1"
+                        android:minHeight="48dp"
+                        android:text="Avoid Crowded Paths"
+                        android:checked="false"/>
 
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
@@ -107,47 +129,65 @@
                 android:outlineProvider="none"
                 app:cardBackgroundColor="@android:color/transparent">
 
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:orientation="vertical"
-                    android:outlineProvider="none">
-
-                    <Button
-                        android:text="Show Path"
-                        android:id="@+id/drawBtn"
-                        android:layout_width="100dp"
-                        android:layout_height="60dp"
-                        android:layout_gravity="end"
-                        android:layout_marginTop="18dp"
-                        android:layout_marginEnd="20dp"
-                        android:layout_weight="1"
-                        app:cornerRadius="30dp" />
-
-                    <Button
-                        android:id="@+id/stepBtn"
-                        android:layout_width="100dp"
-                        android:layout_height="60dp"
-                        android:layout_gravity="end"
-                        android:layout_marginTop="10dp"
-                        android:layout_marginEnd="20dp"
-                        android:layout_marginBottom="5dp"
-                        android:layout_weight="1"
-                        android:text="SHOW STEPS"
-                        app:cornerRadius="30dp" />
-
-                </LinearLayout>
             </androidx.cardview.widget.CardView>
 
         </LinearLayout>
 
+        <Button
+            android:text="Show Path"
+            android:id="@+id/drawBtn"
+            android:layout_width="100dp"
+            android:layout_height="60dp"
+            android:layout_gravity="end"
+            android:layout_marginTop="18dp"
+            android:layout_marginEnd="20dp"
+            android:layout_weight="1"
+            app:cornerRadius="30dp"
+            android:backgroundTint="#00000000"/>
+
+        <Button
+            android:id="@+id/stepBtn"
+            android:layout_width="100dp"
+            android:layout_height="60dp"
+            android:layout_gravity="end"
+            android:layout_marginTop="80dp"
+            android:layout_marginEnd="20dp"
+            android:layout_marginBottom="5dp"
+            android:layout_weight="1"
+            android:text="SHOW STEPS"
+            android:backgroundTint="#00000000"
+            app:cornerRadius="30dp" />
+
     </androidx.cardview.widget.CardView>
 
     <com.github.chrisbanes.photoview.PhotoView
+        android:layout_marginTop="200dp"
         android:id="@+id/map_image"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
         android:layout_weight="1"
         android:src="@drawable/planimetria" />
+
+        <ImageView
+            android:id="@+id/compass_image_view"
+            android:layout_width="50dp"
+            android:layout_height="50dp"
+            android:layout_centerHorizontal="true"
+            android:layout_centerVertical="true"
+            android:layout_marginLeft="310dp"
+            android:layout_marginTop="650dp"
+            android:src="@drawable/img_2" />
+
+        <TextView
+            android:id="@+id/degree_text_view"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Franco"
+            android:layout_marginLeft="300dp"
+            android:layout_marginTop="700dp"
+            android:textStyle="bold"
+            android:textSize="18sp" />
+
+    </FrameLayout>
 
 </LinearLayout>

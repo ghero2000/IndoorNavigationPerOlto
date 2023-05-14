@@ -39,8 +39,9 @@ public class Graph {
      * @param x Coordinata x del nodo
      * @param y Coordinata y del nodo
      */
-    public void addNode(String id, float x, float y, String roomType) {
-        nodes.put(id, new Node(id, x * mapBitmap.getWidth(), y * mapBitmap.getHeight(), roomType));
+    public void addNode(String id, float x, float y, String roomType, String availability, String crowdness) {
+        nodes.put(id, new Node(id, x * mapBitmap.getWidth(), y * mapBitmap.getHeight(), roomType,
+                availability, crowdness));
     }
 
     /**
@@ -72,7 +73,7 @@ public class Graph {
      * @param end Identificativo del nodo di arrivo
      * @return Una lista di nodi che rappresenta il percorso più breve tra i nodi di partenza e arrivo
      */
-    public List<Node> findShortestPath(String start, String end, String roomType) {
+    public List<Node> findShortestPath(String start, String end, String roomType, String available, String crowd) {
 
         Set<String> unvisited = new HashSet<>(nodes.keySet());          // praticamente è il l'heap
         Map<String, Integer> distances = new HashMap<>();
@@ -84,7 +85,7 @@ public class Graph {
         distances.put(start, 0);
 
         while (!unvisited.isEmpty()) {                                                       // finchè non è vuoto
-            String current = findClosestNode(distances, unvisited, roomType);         // estraizone del nodo con peso minore ("il più vicino")
+            String current = findClosestNode(distances, unvisited, roomType, available, crowd);         // estraizone del nodo con peso minore ("il più vicino")
             try {
                 if (current.equals(end)) {
                     break;
@@ -113,13 +114,15 @@ public class Graph {
 
     /*&& !nodes.get(node).getRoomType().equals(roomType) */
 
-    private String findClosestNode(Map<String, Integer> distances, Set<String> unvisited, String roomType) {
+    private String findClosestNode(Map<String, Integer> distances, Set<String> unvisited, String roomType, String available, String crowd) {
         String closestNode = null;
         int minDistance = Integer.MAX_VALUE;
 
         for (String node : unvisited) {
             int distance = distances.get(node);
-            if (distance < minDistance && !nodes.get(node).getRoomType().equals(roomType) ) {
+            if (distance < minDistance && !nodes.get(node).getRoomType().equals(roomType)
+                && !nodes.get(node).getAvailability().equals(available)
+                && !nodes.get(node).getCrowdness().equals(crowd)) {
                 minDistance = distance;
                 closestNode = node;
             }
@@ -155,12 +158,16 @@ public class Graph {
         private float x;
         private float y;
         private String roomType;
+        private String availability;
+        private String crowdness;
         private List<Edge> edges;
 
-        public Node(String id, float x, float y, String roomType) {
+        public Node(String id, float x, float y, String roomType, String availability, String crowdness) {
             this.id = id;
             this.x = x;
             this.y = y;
+            this.availability = availability;
+            this.crowdness = crowdness;
             if(roomType == "classroom" || roomType == "elevator" || roomType == "stairs" || roomType ==  "atrium" || roomType == "bathroom" || roomType == "hallway"){
                 this.roomType = roomType;
             }else{
@@ -208,6 +215,26 @@ public class Graph {
          */
         public List<Edge> getEdges() {
             return edges;
+        }
+
+        public void addRoomTypes(String type) {
+            //
+        }
+
+        public String getAvailability() {
+            return availability;
+        }
+
+        public void setAvailability(String availability) {
+            this.availability = availability;
+        }
+
+        public String getCrowdness() {
+            return crowdness;
+        }
+
+        public void setCrowdness(String crowdness) {
+            this.crowdness = crowdness;
         }
     }
 

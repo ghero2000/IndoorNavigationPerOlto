@@ -4,6 +4,10 @@ import android.app.Dialog;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.drawable.Drawable;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
@@ -11,6 +15,7 @@ import android.widget.Button;
 import android.widget.CompoundButton;
 import android.widget.ImageView;
 import android.widget.Switch;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -20,6 +25,7 @@ import com.github.chrisbanes.photoview.PhotoView;
 import com.google.android.material.textfield.TextInputEditText;
 
 import java.util.List;
+import java.util.Locale;
 
 
 /**
@@ -29,7 +35,17 @@ import java.util.List;
  * le classi MapDrawer e Graph per la logica implementatiiva vera a propria.
  */
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements SensorEventListener {
+    // ATTRIBUTI PER BUSSOLA
+    private SensorManager sensorManager;
+    private Sensor accelerometer;
+    private Sensor magnetometer;
+
+    private ImageView compassImageView;
+    private TextView degreeTextView;
+
+    private float[] mGravity = new float[3];
+    private float[] mGeomagnetic = new float[3];
     // Un'istanza di PhotoView che visualizza l'immagine della planimetria
     PhotoView mapImage;
 
@@ -47,9 +63,17 @@ public class MainActivity extends AppCompatActivity {
 
     private float pointX = -1, pointY = -1;
 
-    private Switch aSwitch;
+    private Switch aSwitch; //stairs
+
+    private Switch bSwitch; //unavailable
+
+    private Switch cSwitch; //crowded
 
     private String stairs = "";
+
+    private String available = "";
+
+    private String crowd = "";
 
     private Graph graph;
 
@@ -78,6 +102,8 @@ public class MainActivity extends AppCompatActivity {
         startPoint = findViewById(R.id.starPoint);
         endPoint = findViewById(R.id.endPoint);
         aSwitch = findViewById(R.id.switch1);
+        bSwitch = findViewById(R.id.switch2);
+        cSwitch = findViewById(R.id.switch3);
 
         map = getResources().getDrawable(R.drawable.planimetria);
         drawBtn = findViewById(R.id.drawBtn);
@@ -102,32 +128,32 @@ public class MainActivity extends AppCompatActivity {
         graph = new Graph(mapBitmap);
         path = null;
 
-        graph.addNode("1", (float) 2020.6055 / 3520, (float) 1991.6936 / 4186,  "atrium");
-        graph.addNode("1.1", (float) 2278.0957 / 3520, (float) 1913.4905 / 4186,  "atrium");
-        graph.addNode("1.2", (float) 1769.668 / 3520, (float) 1773.3766 / 4186,  "atrium");
+        graph.addNode("1", (float) 2020.6055 / 3520, (float) 1991.6936 / 4186,  "atrium", "available", "notCrow");
+        graph.addNode("1.1", (float) 2278.0957 / 3520, (float) 1913.4905 / 4186,  "atrium", "available", "notCrow");
+        graph.addNode("1.2", (float) 1769.668 / 3520, (float) 1773.3766 / 4186,  "atrium", "available", "notCrow");
 
-        graph.addNode("2", (float) 1965.1758 / 3520, (float) 2835.8684 / 4186,  "atrium");
-        graph.addNode("2.1", (float) 1776.2207 / 3520, (float) 2523.056 / 4186,  "atrium");
+        graph.addNode("2", (float) 1965.1758 / 3520, (float) 2835.8684 / 4186,  "atrium", "available", "notCrow");
+        graph.addNode("2.1", (float) 1776.2207 / 3520, (float) 2523.056 / 4186,  "atrium", "available", "notCrow");
 
-        graph.addNode("3", (float) 866.89453 / 3520, (float) 2128.549 / 4186, "classroom");
-        graph.addNode("3.1", (float) 1450.3027 / 3520, (float) 2089.4475 / 4186, "classroom");
+        graph.addNode("3", (float) 866.89453 / 3520, (float) 2128.549 / 4186, "classroom", "available", "notCrow");
+        graph.addNode("3.1", (float) 1450.3027 / 3520, (float) 2089.4475 / 4186, "classroom", "available", "notCrow");
 
-        graph.addNode("4", (float) 827.79297 / 3520, (float) 1600.678 / 4186, "bathroom");
-        graph.addNode("4.1", (float) 1029.8535 / 3520, (float) 1493.1487 / 4186, "bathroom");
+        graph.addNode("4", (float) 827.79297 / 3520, (float) 1600.678 / 4186, "bathroom", "available", "notCrow");
+        graph.addNode("4.1", (float) 1029.8535 / 3520, (float) 1493.1487 / 4186, "bathroom", "available", "notCrow");
 
-        graph.addNode("5", (float) 1342.7734 / 3520, (float) 909.651 / 4186, "classroom");
-        graph.addNode("5.1", (float) 1463.3008 / 3520, (float) 1209.4297 / 4186, "classroom");
+        graph.addNode("5", (float) 1342.7734 / 3520, (float) 909.651 / 4186, "classroom", "available", "notCrow");
+        graph.addNode("5.1", (float) 1463.3008 / 3520, (float) 1209.4297 / 4186, "classroom", "available", "notCrow");
 
-        graph.addNode("6", (float) 1939.1797 / 3520, (float) 883.5833 / 4186, "classroom");
-        graph.addNode("6.1", (float) 1763.1152 / 3520, (float) 1248.5312 / 4186, "classroom");
+        graph.addNode("6", (float) 1939.1797 / 3520, (float) 883.5833 / 4186, "classroom", "available", "notCrow");
+        graph.addNode("6.1", (float) 1763.1152 / 3520, (float) 1248.5312 / 4186, "classroom", "available", "notCrow");
 
-        graph.addNode("7", (float) 2046.709 / 3520, (float) 1493.1487 / 4186, "stairs");  ////////////////////////////////////////////////// modificare
+        graph.addNode("7", (float) 2046.709 / 3520, (float) 1493.1487 / 4186, "stairs", "available", "notCrow");  ////////////////////////////////////////////////// modificare
 
-        graph.addNode("8", (float) 1450.3027 / 3520, (float) 1519.2164 / 4186, "hallway");
-        graph.addNode("8.1", (float) 1450.3027 / 3520, (float) 1789.669 / 4186, "hallway");
-        graph.addNode("8.2", (float) 1776.2207 / 3520, (float) 1467.081 / 4186, "hallway");
+        graph.addNode("8", (float) 1450.3027 / 3520, (float) 1519.2164 / 4186, "hallway", "available", "notCrow");
+        graph.addNode("8.1", (float) 1450.3027 / 3520, (float) 1789.669 / 4186, "hallway", "available", "notCrow");
+        graph.addNode("8.2", (float) 1776.2207 / 3520, (float) 1467.081 / 4186, "hallway", "available", "notCrow");
 
-        graph.addNode("9", (float) 2591.0156 / 3520, (float) 1913.4905 / 4186,  "atrium");
+        graph.addNode("9", (float) 2591.0156 / 3520, (float) 1913.4905 / 4186,  "atrium", "available", "notCrow");
 
         graph.addEdge("1", "7", 1);    ////////////////////////////////////////// cancellare
         graph.addEdge("7", "6", 1);    ////////////////////////////////////////// cancellare
@@ -183,11 +209,31 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        bSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                if(bSwitch.isChecked())
+                    available = "unavailable";
+                else
+                    available = "";
+            }
+        });
+
+        cSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                if(cSwitch.isChecked())
+                    crowd = "crowded";
+                else
+                    crowd = "";
+            }
+        });
+
         drawBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 clearPath();
-                path = graph.findShortestPath(startPoint.getText().toString(), endPoint.getText().toString(), stairs);
+                path = graph.findShortestPath(startPoint.getText().toString(), endPoint.getText().toString(), stairs, available, crowd);
                 try {
                     path.get(1);
                     path.get(2);
@@ -203,9 +249,7 @@ public class MainActivity extends AppCompatActivity {
 
         Log.d("Coordinate", "Width: "+  String.valueOf(mapBitmap.getWidth()) + "  Height: " + String.valueOf(mapBitmap.getHeight()));
 
-        int[] testo = new int[1];
-        testo[0] = 1;
-        checkPoint(mapImage, graph, testo, mapBitmap, touchTransformer);
+        checkPoint(mapImage, graph, mapBitmap, touchTransformer);
 
         Button stepBtn = findViewById(R.id.stepBtn);
 
@@ -217,6 +261,14 @@ public class MainActivity extends AppCompatActivity {
                 stepCount ++;
             }
         });
+
+        //onCreate per bussola
+        compassImageView = findViewById(R.id.compass_image_view);
+        degreeTextView = findViewById(R.id.degree_text_view);
+        sensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
+        accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+        magnetometer = sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);
+        //---------- fine bussola
     }
 
     /**
@@ -241,24 +293,136 @@ public class MainActivity extends AppCompatActivity {
         mapImage.invalidate(); // Forza il ridisegno della PhotoView
     }
 
-    public void checkPoint(PhotoView mapImage, Graph graph, int[] testo, Bitmap mapBitmap, TouchTransformer touchTransformer){
+    public void checkPoint(PhotoView mapImage, Graph graph, Bitmap mapBitmap, TouchTransformer touchTransformer){
         mapImage.setOnViewTapListener(new OnViewTapListener() {
             @Override
             public void onViewTap(View view, float x, float y) {
                 float pointX = touchTransformer.transformX(x, mapImage, mapBitmap);
                 float pointY = touchTransformer.transformY(y, mapImage, mapBitmap);
-                indoorNav.checkNode(graph, testo, pointX, pointY, startPoint, endPoint);
+                Graph.Node node = indoorNav.checkNode(graph, pointX, pointY, startPoint, endPoint);
                 final Dialog dialog = new Dialog(MainActivity.this);
 
                 //  Imposta il layout del tuo dialog personalizzato
                 dialog.setContentView(R.layout.custom_dialog);
 
-                // Mostra il dialog
-                dialog.show();
+                TextView node_name = dialog.findViewById(R.id.node_name);
+                TextView node_id = dialog.findViewById(R.id.node_id);
+                TextView node_type = dialog.findViewById(R.id.node_type);
+
+                if(node != null) {
+                    node_name.setText("Node: " + node.getId());
+                    node_id.setText(node.getId());
+                    node_type.setText(node.getRoomType());
+
+                    Button btn_start = dialog.findViewById(R.id.start_btn);
+                    Button btn_end = dialog.findViewById(R.id.end_btn);
+
+                    Switch sw_crowded = dialog.findViewById(R.id.sw_crowded);
+                    Switch sw_available = dialog.findViewById(R.id.sw_available);
+
+                    btn_start.setOnClickListener(new View.OnClickListener() {
+                        @Override
+                        public void onClick(View v) {
+                            startPoint.setText(node_id.getText().toString());
+                            dialog.dismiss();
+                        }
+                    });
+
+                    btn_end.setOnClickListener(new View.OnClickListener() {
+                        @Override
+                        public void onClick(View v) {
+                            endPoint.setText(node_id.getText().toString());
+                            dialog.dismiss();
+                        }
+                    });
+                    if (node.getAvailability() == "available") {
+                        sw_available.setChecked(true);
+                    }
+                    if (node.getAvailability() == "unavailable") {
+                        sw_available.setChecked(false);
+                    }
+                    if (node.getCrowdness() == "crowded") {
+                        sw_crowded.setChecked(true);
+                    }
+                    if (node.getCrowdness() == "notCrow") {
+                        sw_crowded.setChecked(false);
+                    }
+                    sw_available.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+                        @Override
+                        public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                            if (sw_available.isChecked()) {
+                                node.setAvailability("available");
+                            } else
+                                node.setAvailability("unavailable");
+                        }
+                    });
+
+                    sw_crowded.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+                        @Override
+                        public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                            if (sw_crowded.isChecked()) {
+                                node.setCrowdness("crowded");
+                            } else
+                                node.setCrowdness("notCrow");
+                        }
+                    });
+
+                    // Mostra il dialog
+                    dialog.show();
+                }
             }
         });
     }
 
+    @Override
+    protected void onResume() {
+        super.onResume();
+        sensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_UI);
+        sensorManager.registerListener(this, magnetometer, SensorManager.SENSOR_DELAY_UI);
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        sensorManager.unregisterListener(this);
+    }
+
+    @Override
+    public void onSensorChanged(SensorEvent event) {
+        final float alpha = 0.97f;
+
+        if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
+            mGravity[0] = alpha * mGravity[0] + (1 - alpha) * event.values[0];
+            mGravity[1] = alpha * mGravity[1] + (1 - alpha) * event.values[1];
+            mGravity[2] = alpha * mGravity[2] + (1 - alpha) * event.values[2];
+        }
+
+        if (event.sensor.getType() == Sensor.TYPE_MAGNETIC_FIELD) {
+            mGeomagnetic[0] = alpha * mGeomagnetic[0] + (1 - alpha) * event.values[0];
+            mGeomagnetic[1] = alpha * mGeomagnetic[1] + (1 - alpha) * event.values[1];
+            mGeomagnetic[2] = alpha * mGeomagnetic[2] + (1 - alpha) * event.values[2];
+        }
+
+        float R[] = new float[9];
+        float I[] = new float[9];
+        boolean success = SensorManager.getRotationMatrix(R, I, mGravity, mGeomagnetic);
+
+        if (success) {
+            float orientation[] = new float[3];
+            SensorManager.getOrientation(R, orientation);
+            float azimuthInRadians = orientation[0];
+            float azimuthInDegrees = (float) Math.toDegrees(azimuthInRadians);
+            float degrees = (azimuthInDegrees + 360) % 360;
+
+            degreeTextView.setText(String.format(Locale.getDefault(), "%.0f°", degrees));
+            compassImageView.setRotation(-degrees);
+        }
+    }
+
+    @Override
+    public void onAccuracyChanged(Sensor sensor, int accuracy) {
+
+    }
 
 }
 

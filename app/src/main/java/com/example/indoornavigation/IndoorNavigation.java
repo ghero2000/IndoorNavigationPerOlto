@@ -47,29 +47,20 @@ public class IndoorNavigation {
 
     }
 
-    public void checkNode(Graph graph, int[] testo, float pointX, float pointY, TextInputEditText startPoint, TextInputEditText endPoint) {
+    public Graph.Node checkNode(Graph graph, float pointX, float pointY, TextInputEditText startPoint, TextInputEditText endPoint) {
         String id = "1";
         while (graph.getNode(id) != null) {
             Graph.Node node = graph.getNode(id);
             if (Math.abs(pointX - node.getX()) <= 200) {
                 if (Math.abs(pointY - node.getY()) <= 200) {
-                    if(testo[0] == 1) {
-                        startPoint.setText(id);
-                        testo[0]++;
-                        break;
-                    }
-                    if(testo[0] == 2) {
-                        endPoint.setText(id);
-                        testo[0]--;
-                        break;
-                    }
-                    break;
+                    return node;
                 }
             }
             int a = Integer.parseInt(id);
             a++;
             id = String.valueOf(a);
         }
+        return null;
     }
 
     public void clearPath(PhotoView mapView){
