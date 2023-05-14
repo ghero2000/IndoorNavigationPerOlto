@@ -52,7 +52,7 @@
 
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/starPoint"
-                            android:layout_width="263dp"
+                            android:layout_width="200dp"
                             android:layout_height="53dp"
                             android:hint="start point"
                             android:outlineProvider="none" />
@@ -71,19 +71,13 @@
 
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/endPoint"
-                            android:layout_width="263dp"
+                            android:layout_width="200dp"
                             android:layout_height="53dp"
                             android:layout_marginTop="10dp"
                             android:layout_weight="1"
                             android:hint="end point"
                             android:outlineProvider="none" />
                     </com.google.android.material.textfield.TextInputLayout>
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Preferencies:"
-                        android:textSize="20sp"
-                        android:textStyle="bold"/>
 
                     <Switch
                         android:id="@+id/switch1"
@@ -93,6 +87,15 @@
                         android:minHeight="48dp"
                         android:text="Avoid Staircase" />
 
+                    <Switch
+                        android:id="@+id/switch2"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:minHeight="48dp"
+                        android:text="Avoid Unavailable Paths"
+                        android:checked="true"/>
+
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
 
@@ -100,7 +103,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_gravity="bottom"
-                android:layout_marginBottom="20dp"
+                android:layout_marginBottom="115dp"
                 android:outlineProvider="none"
                 app:cardBackgroundColor="@android:color/transparent">
 
@@ -113,23 +116,24 @@
                     <Button
                         android:text="Show Path"
                         android:id="@+id/drawBtn"
-                        android:layout_width="80dp"
-                        android:layout_height="match_parent"
+                        android:layout_width="100dp"
+                        android:layout_height="60dp"
                         android:layout_gravity="end"
-                        android:layout_marginTop="20dp"
+                        android:layout_marginTop="18dp"
                         android:layout_marginEnd="20dp"
                         android:layout_weight="1"
                         app:cornerRadius="30dp" />
 
                     <Button
                         android:id="@+id/stepBtn"
-                        android:layout_width="match_parent"
-                        android:layout_height="match_parent"
+                        android:layout_width="100dp"
+                        android:layout_height="60dp"
                         android:layout_gravity="end"
-                        android:layout_marginTop="20dp"
+                        android:layout_marginTop="10dp"
                         android:layout_marginEnd="20dp"
+                        android:layout_marginBottom="5dp"
                         android:layout_weight="1"
-                        android:text="step"
+                        android:text="SHOW STEPS"
                         app:cornerRadius="30dp" />
 
                 </LinearLayout>

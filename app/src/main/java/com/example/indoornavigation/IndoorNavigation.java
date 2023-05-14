@@ -6,7 +6,6 @@ import android.widget.Toast;
 import com.github.chrisbanes.photoview.PhotoView;
 import com.google.android.material.textfield.TextInputEditText;
 
-import java.nio.MappedByteBuffer;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -15,7 +14,7 @@ public class IndoorNavigation {
 
     private Context context;
 
-    public IndoorNavigation(MapDrawer mapDrawer, Context context) {
+    public IndoorNavigation(MapDrawer mapDrawer, Context context, PhotoView mapImage) {
         this.mapDrawer = mapDrawer;
         this.context = context;
     }
@@ -25,10 +24,12 @@ public class IndoorNavigation {
         if(path == null || path.size() == 0){
 
             Toast.makeText(context  , "Warning: Select a possible path", Toast.LENGTH_SHORT).show();
+            return;
 
         } else if(count + 1   >= path.size()){
 
             Toast.makeText(context  , "you arrived!!", Toast.LENGTH_SHORT).show();
+            clearPath(mapView);
 
         }else {
 
@@ -69,6 +70,12 @@ public class IndoorNavigation {
             a++;
             id = String.valueOf(a);
         }
+    }
+
+    public void clearPath(PhotoView mapView){
+        mapDrawer.resetMap(); // Aggiungi questa riga per ripristinare la mappa nel MapDrawer
+        mapView.setImageBitmap(mapDrawer.getMapBitmap()); // Imposta la nuova mappa ripristinata
+        mapView.invalidate(); // Forza il ridisegno della PhotoView
     }
 
 }

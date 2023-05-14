@@ -1,5 +1,6 @@
 package com.example.indoornavigation;
 
+import android.app.Dialog;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.drawable.Drawable;
@@ -94,7 +95,7 @@ public class MainActivity extends AppCompatActivity {
 
         mapDrawer = new MapDrawer(mapBitmap);
 
-        indoorNav = new IndoorNavigation(mapDrawer, getApplicationContext());
+        indoorNav = new IndoorNavigation(mapDrawer, getApplicationContext(), mapImage);
 
         //float[] touchPoint = new float[2];
 
@@ -187,8 +188,16 @@ public class MainActivity extends AppCompatActivity {
             public void onClick(View view) {
                 clearPath();
                 path = graph.findShortestPath(startPoint.getText().toString(), endPoint.getText().toString(), stairs);
-                disegnaPercorso(path);
-                stepCount = 0;
+                try {
+                    path.get(1);
+                    path.get(2);
+                } catch (Exception e) {
+                    path = null;
+                }
+                if (path != null) {
+                    disegnaPercorso(path);
+                    stepCount = 0;
+                }
             }
         });
 
@@ -203,7 +212,7 @@ public class MainActivity extends AppCompatActivity {
         stepBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                clearPath();
+                clearPath(true);
                 indoorNav.stepNavigation (path, mapImage, stepCount);
                 stepCount ++;
             }
@@ -228,6 +237,10 @@ public class MainActivity extends AppCompatActivity {
         mapImage.invalidate(); // Forza il ridisegno della PhotoView
     }
 
+    public void clearPath(boolean cosa){
+        mapImage.invalidate(); // Forza il ridisegno della PhotoView
+    }
+
     public void checkPoint(PhotoView mapImage, Graph graph, int[] testo, Bitmap mapBitmap, TouchTransformer touchTransformer){
         mapImage.setOnViewTapListener(new OnViewTapListener() {
             @Override
@@ -235,6 +248,13 @@ public class MainActivity extends AppCompatActivity {
                 float pointX = touchTransformer.transformX(x, mapImage, mapBitmap);
                 float pointY = touchTransformer.transformY(y, mapImage, mapBitmap);
                 indoorNav.checkNode(graph, testo, pointX, pointY, startPoint, endPoint);
+                final Dialog dialog = new Dialog(MainActivity.this);
+
+                //  Imposta il layout del tuo dialog personalizzato
+                dialog.setContentView(R.layout.custom_dialog);
+
+                // Mostra il dialog
+                dialog.show();
             }
         });
     }
