@@ -44,6 +44,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private ImageView compassImageView;
     private TextView degreeTextView;
 
+    private TextView optTxt;
+
     private float[] mGravity = new float[3];
     private float[] mGeomagnetic = new float[3];
     // Un'istanza di PhotoView che visualizza l'immagine della planimetria
@@ -101,9 +103,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
         startPoint = findViewById(R.id.starPoint);
         endPoint = findViewById(R.id.endPoint);
-        aSwitch = findViewById(R.id.switch1);
-        bSwitch = findViewById(R.id.switch2);
-        cSwitch = findViewById(R.id.switch3);
 
         map = getResources().getDrawable(R.drawable.planimetria);
         drawBtn = findViewById(R.id.drawBtn);
@@ -199,35 +198,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         mapImage.setImageBitmap(mapDrawer.getMapBitmap());
         mapImage.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
 
-        aSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                if(aSwitch.isChecked())
-                    stairs = "stairs";
-                else
-                    stairs = "";
-            }
-        });
-
-        bSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                if(bSwitch.isChecked())
-                    available = "unavailable";
-                else
-                    available = "";
-            }
-        });
-
-        cSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                if(cSwitch.isChecked())
-                    crowd = "crowded";
-                else
-                    crowd = "";
-            }
-        });
+        optTxt = findViewById(R.id.btn_options);
+        checkOptions();
 
         drawBtn.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -269,6 +241,65 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
         magnetometer = sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);
         //---------- fine bussola
+    }
+
+    private void checkOptions() {
+        optTxt.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                final Dialog dialog2 = new Dialog(MainActivity.this);
+                //  Imposta il layout del tuo dialog personalizzato
+                dialog2.setContentView(R.layout.options_dialog);
+
+                aSwitch = dialog2.findViewById(R.id.switch1);
+                bSwitch = dialog2.findViewById(R.id.switch2);
+                cSwitch = dialog2.findViewById(R.id.switch3);
+
+                if (stairs == "stairs") {
+                    aSwitch.setChecked(true);
+                }
+                else aSwitch.setChecked(false);
+                if (available == "available") {
+                    bSwitch.setChecked(true);
+                }
+                else bSwitch.setChecked(false);
+                if (crowd == "crowded") {
+                    cSwitch.setChecked(true);
+                }
+                else cSwitch.setChecked(false);
+
+                aSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+                    @Override
+                    public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                        if(aSwitch.isChecked())
+                            stairs = "stairs";
+                        else
+                            stairs = "";
+                    }
+                });
+
+                bSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+                    @Override
+                    public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                        if(bSwitch.isChecked())
+                            available = "unavailable";
+                        else
+                            available = "";
+                    }
+                });
+
+                cSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+                    @Override
+                    public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                        if(cSwitch.isChecked())
+                            crowd = "crowded";
+                        else
+                            crowd = "";
+                    }
+                });
+                dialog2.show();
+            }
+        });
     }
 
     /**

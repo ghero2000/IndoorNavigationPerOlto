@@ -25,7 +25,7 @@
 
         <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="270dp"
+            android:layout_height="wrap_content"
             android:orientation="horizontal">
 
             <androidx.cardview.widget.CardView
@@ -59,8 +59,8 @@
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/starPoint"
                             android:layout_width="200dp"
-                            android:layout_height="40dp"
-                            android:hint="start point"
+                            android:layout_height="50dp"
+                            android:hint="Starting Point"
                             android:outlineProvider="none" />
 
                     </com.google.android.material.textfield.TextInputLayout>
@@ -78,45 +78,23 @@
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/endPoint"
                             android:layout_width="200dp"
-                            android:layout_height="40dp"
+                            android:layout_height="50dp"
                             android:layout_marginTop="10dp"
                             android:layout_weight="1"
-                            android:hint="end point"
+                            android:hint="Arrival Point"
                             android:outlineProvider="none" />
+
+                        <TextView
+                            android:id="@+id/btn_options"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginLeft="10dp"
+                            android:layout_marginTop="10dp"
+                            android:text="Path Options"
+                            android:textColor="@color/white"
+                            android:textSize="16sp"
+                            android:textStyle="bold" />
                     </com.google.android.material.textfield.TextInputLayout>
-
-                    <Switch
-                        android:textColor="@color/white"
-                        android:layout_marginTop="10dp"
-                        android:trackTint="@color/white"
-                        android:id="@+id/switch1"
-                        android:layout_width="220dp"
-                        android:layout_height="40dp"
-                        android:layout_weight="1"
-                        android:minHeight="48dp"
-                        android:text="Avoid Staircase" />
-
-                    <Switch
-                        android:textColor="@color/white"
-                        android:trackTint="@color/white"
-                        android:id="@+id/switch2"
-                        android:layout_width="220dp"
-                        android:layout_height="40dp"
-                        android:layout_weight="1"
-                        android:minHeight="48dp"
-                        android:text="Avoid Unavailable Paths"
-                        android:checked="false"/>
-
-                    <Switch
-                        android:textColor="@color/white"
-                        android:trackTint="@color/white"
-                        android:id="@+id/switch3"
-                        android:layout_width="220dp"
-                        android:layout_height="40dp"
-                        android:layout_weight="1"
-                        android:minHeight="48dp"
-                        android:text="Avoid Crowded Paths"
-                        android:checked="false"/>
 
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
