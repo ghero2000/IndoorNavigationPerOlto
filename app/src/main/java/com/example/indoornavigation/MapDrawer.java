@@ -3,21 +3,10 @@ package com.example.indoornavigation;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
-import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.Path;
-import android.graphics.PointF;
-import android.graphics.PorterDuff;
-import android.graphics.RectF;
-import android.util.Log;
-import android.view.MotionEvent;
-import android.view.View;
-
-import androidx.recyclerview.widget.RecyclerView;
 
 import com.github.chrisbanes.photoview.PhotoView;
-import com.github.chrisbanes.photoview.PhotoViewAttacher;
-import com.github.chrisbanes.photoview.OnMatrixChangedListener;
 
 
 import java.util.List;
@@ -55,7 +44,7 @@ public class MapDrawer {
         this.mapCanvas = new Canvas(this.mapBitmap);
 
         linePaint = new Paint();
-        linePaint.setColor(Color.BLUE);
+        linePaint.setColor(Color.parseColor("#8C4444"));
         linePaint.setStrokeWidth(25);
         linePaint.setStyle(Paint.Style.STROKE);
         linePaint.setStrokeJoin(Paint.Join.ROUND);
@@ -189,6 +178,22 @@ public class MapDrawer {
         // Sposta la vista all'interno della PhotoView
         mapView.scrollTo((int) distanceX, (int) distanceY);
 
+    }
+
+    public void drawIndicator(float x, float y) {
+        Paint circlePaint = new Paint();
+        circlePaint.setColor(Color.BLUE);
+        circlePaint.setStyle(Paint.Style.FILL);
+        circlePaint.setAntiAlias(true);
+        mapCanvas.drawCircle(x,y,80,circlePaint);
+    }
+
+    public void drawIndicator(float x, float y, int trasparent) {
+        Paint circlePaint = new Paint();
+        circlePaint.setColor(trasparent);
+        circlePaint.setStyle(Paint.Style.FILL);
+        circlePaint.setAntiAlias(true);
+        mapCanvas.drawCircle(x,y,80,circlePaint);
     }
 
 

@@ -47,7 +47,7 @@ public class IndoorNavigation {
 
     }
 
-    public Graph.Node checkNode(Graph graph, float pointX, float pointY, TextInputEditText startPoint, TextInputEditText endPoint) {
+    public Graph.Node checkNode(Graph graph, float pointX, float pointY) {
         String id = "1";
         while (graph.getNode(id) != null) {
             Graph.Node node = graph.getNode(id);

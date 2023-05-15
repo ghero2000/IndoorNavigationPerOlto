@@ -3,6 +3,9 @@ package com.example.indoornavigation;
 import android.app.Dialog;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Color;
+import android.graphics.Matrix;
+import android.graphics.RectF;
 import android.graphics.drawable.Drawable;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
@@ -16,10 +19,10 @@ import android.widget.CompoundButton;
 import android.widget.ImageView;
 import android.widget.Switch;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.github.chrisbanes.photoview.OnMatrixChangedListener;
 import com.github.chrisbanes.photoview.OnViewTapListener;
 import com.github.chrisbanes.photoview.PhotoView;
 import com.google.android.material.textfield.TextInputEditText;
@@ -40,30 +43,42 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private SensorManager sensorManager;
     private Sensor accelerometer;
     private Sensor magnetometer;
-
     private ImageView compassImageView;
     private TextView degreeTextView;
+    // ATTRIBUTI PER CONTAPASSI
+    private Sensor stepSensor;
+    private Sensor orientationSensor;
 
     private TextView optTxt;
 
+    private float[] position = new float[2];
     private float[] mGravity = new float[3];
     private float[] mGeomagnetic = new float[3];
     // Un'istanza di PhotoView che visualizza l'immagine della planimetria
     PhotoView mapImage;
+    PhotoView indicatorImage; //nuova photoView per l'indicatore utente.
 
     // Un'istanza di Bitmap che contiene l'immagine della planimetria
     private Bitmap mapBitmap;
+    // Un'istanza di Bitmap che contiene l'immagine dell'indicatore
+    private Bitmap indicatorBitmap;
 
     // Un'istanza di MapDrawer per disegnare percorsi sulla planimetria
     private MapDrawer mapDrawer;
+    // Un'istanza di MapDrawer per disegnare indicatori utente sulla mappa
+    private MapDrawer indicatorDrawer;
 
     private Drawable map;
+    private Drawable indicator;
 
+    private boolean[] start = new boolean[1];
+
+    private int[] steps = new int[1];
+
+    private double MagnitudePrevious = 0;
     private TextInputEditText startPoint;
 
     private TextInputEditText endPoint;
-
-    private float pointX = -1, pointY = -1;
 
     private Switch aSwitch; //stairs
 
@@ -86,8 +101,15 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private IndoorNavigation indoorNav;
 
     private Button drawBtn;
+    private Button userBtn;
 
     private TouchTransformer touchTransformer;
+
+    private Button btn_start;
+
+    private boolean[] user = new boolean[1];
+
+    private TextView txt_passi;
 
     /**
      * Metodo onCreate per la creazione dell'activity.
@@ -101,17 +123,29 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        txt_passi = findViewById(R.id.txt_passi);
+        txt_passi.setText("0");
+        position[0] = 0;
+        position[1] = 0;
+
         startPoint = findViewById(R.id.starPoint);
         endPoint = findViewById(R.id.endPoint);
+
+        btn_start = findViewById(R.id.btn_start);
+        start[0] = false;
 
         map = getResources().getDrawable(R.drawable.planimetria);
         drawBtn = findViewById(R.id.drawBtn);
         mapBitmap = BitmapFactory.decodeResource(getResources(),
                 R.drawable.planimetria);
 
+        indicator = getResources().getDrawable(R.drawable.indicator);
+        indicatorBitmap = BitmapFactory.decodeResource(getResources(),
+                R.drawable.indicator);
+
         touchTransformer = new TouchTransformer();
 
-        if (mapBitmap == null) {
+        if (mapBitmap == null || indicatorBitmap == null) {
             Log.e("MainActivity", "Failed to load map image. " +
                     "Ensure that the image is present in the res/drawable folder " +
                     "and its name matches the one in the code.");
@@ -119,6 +153,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         }
 
         mapDrawer = new MapDrawer(mapBitmap);
+        indicatorDrawer = new MapDrawer(indicatorBitmap);
 
         indoorNav = new IndoorNavigation(mapDrawer, getApplicationContext(), mapImage);
 
@@ -198,8 +233,23 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         mapImage.setImageBitmap(mapDrawer.getMapBitmap());
         mapImage.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
 
+        indicatorImage = findViewById(R.id.indicator_image);
+        indicatorImage.setImageDrawable(indicator);
+        indicatorImage.setImageBitmap(indicatorDrawer.getMapBitmap());
+        indicatorImage.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
+
+
         optTxt = findViewById(R.id.btn_options);
         checkOptions();
+        btn_start.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (start[0])
+                    start[0] = false;
+                else
+                    start[0] = true;
+            }
+        });
 
         drawBtn.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -221,7 +271,14 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
         Log.d("Coordinate", "Width: "+  String.valueOf(mapBitmap.getWidth()) + "  Height: " + String.valueOf(mapBitmap.getHeight()));
 
-        checkPoint(mapImage, graph, mapBitmap, touchTransformer);
+        indicatorImage.setOnMatrixChangeListener(new OnMatrixChangedListener() {
+            @Override
+            public void onMatrixChanged(RectF rect) {
+                Matrix matrix = new Matrix();
+                indicatorImage.getSuppMatrix(matrix);
+                mapImage.setDisplayMatrix(matrix);
+            }
+        });
 
         Button stepBtn = findViewById(R.id.stepBtn);
 
@@ -229,7 +286,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             @Override
             public void onClick(View view) {
                 clearPath(true);
-                indoorNav.stepNavigation (path, mapImage, stepCount);
+                indoorNav.stepNavigation(path, mapImage, stepCount);
                 stepCount ++;
             }
         });
@@ -241,6 +298,35 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
         magnetometer = sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);
         //---------- fine bussola
+        //onCreate per contapassi
+        stepSensor = sensorManager.getDefaultSensor(Sensor.TYPE_STEP_DETECTOR);
+        orientationSensor = sensorManager.getDefaultSensor(Sensor.TYPE_ORIENTATION);
+        steps[0] = 0;
+
+        userBtn = findViewById(R.id.btn_user);
+        user[0] = true;
+        userBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if(user[0]) {
+                    userBtn.setBackgroundColor(getResources().getColor(android.R.color.darker_gray));
+                    user[0] = false;
+                }
+                else {
+                    userBtn.setBackgroundColor(getResources().getColor(android.R.color.holo_blue_light));
+                    user[0] = true;
+                }
+
+            }
+        });
+        checkPoint(indicatorImage, graph, mapBitmap, touchTransformer, indicatorImage);
+    }
+
+    private void disegnaIndicatore(float x, float y) {
+        clearPath(indicatorImage);
+        TouchTransformer transformer = new TouchTransformer();
+        indicatorDrawer.drawIndicator(x, y);
+        indicatorImage.invalidate();
     }
 
     private void checkOptions() {
@@ -320,17 +406,31 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         mapImage.invalidate(); // Forza il ridisegno della PhotoView
     }
 
-    public void clearPath(boolean cosa){
+    public void clearPath(boolean b){
         mapImage.invalidate(); // Forza il ridisegno della PhotoView
     }
 
-    public void checkPoint(PhotoView mapImage, Graph graph, Bitmap mapBitmap, TouchTransformer touchTransformer){
-        mapImage.setOnViewTapListener(new OnViewTapListener() {
+    public void clearPath(PhotoView image){
+        indicatorDrawer.resetMap(); // Aggiungi questa riga per ripristinare la mappa nel MapDrawer
+        image.setImageBitmap(indicatorDrawer.getMapBitmap()); // Imposta la nuova mappa ripristinata
+        image.invalidate(); // Forza il ridisegno della PhotoView
+    }
+
+    public void checkPoint(PhotoView mapImage, Graph graph, Bitmap mapBitmap, TouchTransformer touchTransformer, PhotoView indicatorImage){
+        indicatorImage.setOnViewTapListener(new OnViewTapListener() {
             @Override
             public void onViewTap(View view, float x, float y) {
-                float pointX = touchTransformer.transformX(x, mapImage, mapBitmap);
-                float pointY = touchTransformer.transformY(y, mapImage, mapBitmap);
-                Graph.Node node = indoorNav.checkNode(graph, pointX, pointY, startPoint, endPoint);
+                //879 1091
+                float pointX = touchTransformer.transformX(x, indicatorImage, indicatorBitmap);
+                float pointY = touchTransformer.transformY(y, indicatorImage, indicatorBitmap);
+
+                if (!user[0]) {
+                    disegnaIndicatore(pointX, pointY);
+                    position[0] = pointX;
+                    position[1] = pointY;
+                }
+
+                Graph.Node node = indoorNav.checkNode(graph, pointX, pointY);
                 final Dialog dialog = new Dialog(MainActivity.this);
 
                 //  Imposta il layout del tuo dialog personalizzato
@@ -408,6 +508,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     @Override
     protected void onResume() {
         super.onResume();
+        sensorManager.registerListener(this, stepSensor, SensorManager.SENSOR_DELAY_NORMAL);
+        sensorManager.registerListener(this, orientationSensor, SensorManager.SENSOR_DELAY_NORMAL);
         sensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_UI);
         sensorManager.registerListener(this, magnetometer, SensorManager.SENSOR_DELAY_UI);
     }
@@ -421,11 +523,24 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     @Override
     public void onSensorChanged(SensorEvent event) {
         final float alpha = 0.97f;
+        boolean[] is_step = new boolean[1];
+        is_step[0] = false;
 
         if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
             mGravity[0] = alpha * mGravity[0] + (1 - alpha) * event.values[0];
             mGravity[1] = alpha * mGravity[1] + (1 - alpha) * event.values[1];
             mGravity[2] = alpha * mGravity[2] + (1 - alpha) * event.values[2];
+            float x_acceleration = event.values[0];
+            float y_acceleration = event.values[1];
+            float z_acceleration = event.values[2];
+            double Magnitude = Math.sqrt(x_acceleration*x_acceleration + y_acceleration*y_acceleration + z_acceleration*z_acceleration);
+            double MagnitudeDelta = Magnitude - MagnitudePrevious;
+            MagnitudePrevious = Magnitude;
+            if (MagnitudeDelta > 6){
+                stepCount++;
+                is_step[0] = true;
+            }
+            txt_passi.setText(String.valueOf(stepCount));
         }
 
         if (event.sensor.getType() == Sensor.TYPE_MAGNETIC_FIELD) {
@@ -436,7 +551,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
         float R[] = new float[9];
         float I[] = new float[9];
-        boolean success = SensorManager.getRotationMatrix(R, I, mGravity, mGeomagnetic);
+        boolean success = getRotationMatrix(R, I, mGravity, mGeomagnetic);
 
         if (success) {
             float orientation[] = new float[3];
@@ -447,13 +562,106 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
             degreeTextView.setText(String.format(Locale.getDefault(), "%.0f°", degrees));
             compassImageView.setRotation(-degrees);
-            mapImage.setRotation(-degrees);
+            if (start[0]) {
+                mapImage.setRotation(-degrees);
+                indicatorImage.setRotation(-degrees);
+                double radian = Math.toRadians(degrees);
+                double stepLength = 60;
+                if (is_step[0]) {
+                    is_step[0] = false;
+                    double deltaX = stepLength * Math.sin(radian);
+                    double deltaY = stepLength * Math.cos(radian);
+                    if (position[0] != 0) {
+                        position[0] += deltaX;
+                        position[1] -= deltaY;
+                        disegnaIndicatore(position[0], position[1]);
+                    }
+                }
+            }
+            else {
+                mapImage.setRotation(0f);
+                indicatorImage.setRotation(0f);
+            }
         }
     }
 
     @Override
     public void onAccuracyChanged(Sensor sensor, int accuracy) {
 
+    }
+
+    // metodo di SensorManager, trasferito in native per efficienza:
+    public static boolean getRotationMatrix(float[] R, float[] I,
+                                            float[] gravity, float[] geomagnetic) {
+        // TODO: move this to native code for efficiency
+        float Ax = gravity[0];
+        float Ay = gravity[1];
+        float Az = gravity[2];
+
+        final float normsqA = (Ax * Ax + Ay * Ay + Az * Az);
+        final float g = 9.81f;
+        final float freeFallGravitySquared = 0.01f * g * g;
+        if (normsqA < freeFallGravitySquared) {
+            // gravity less than 10% of normal value
+            return false;
+        }
+
+        final float Ex = geomagnetic[0];
+        final float Ey = geomagnetic[1];
+        final float Ez = geomagnetic[2];
+        float Hx = Ey * Az - Ez * Ay;
+        float Hy = Ez * Ax - Ex * Az;
+        float Hz = Ex * Ay - Ey * Ax;
+        final float normH = (float) Math.sqrt(Hx * Hx + Hy * Hy + Hz * Hz);
+
+        if (normH < 0.1f) {
+            // device is close to free fall (or in space?), or close to
+            // magnetic north pole. Typical values are  > 100.
+            return false;
+        }
+        final float invH = 1.0f / normH;
+        Hx *= invH;
+        Hy *= invH;
+        Hz *= invH;
+        final float invA = 1.0f / (float) Math.sqrt(Ax * Ax + Ay * Ay + Az * Az);
+        Ax *= invA;
+        Ay *= invA;
+        Az *= invA;
+        final float Mx = Ay * Hz - Az * Hy;
+        final float My = Az * Hx - Ax * Hz;
+        final float Mz = Ax * Hy - Ay * Hx;
+        if (R != null) {
+            if (R.length == 9) {
+                R[0] = Hx;     R[1] = Hy;     R[2] = Hz;
+                R[3] = Mx;     R[4] = My;     R[5] = Mz;
+                R[6] = Ax;     R[7] = Ay;     R[8] = Az;
+            } else if (R.length == 16) {
+                R[0]  = Hx;    R[1]  = Hy;    R[2]  = Hz;   R[3]  = 0;
+                R[4]  = Mx;    R[5]  = My;    R[6]  = Mz;   R[7]  = 0;
+                R[8]  = Ax;    R[9]  = Ay;    R[10] = Az;   R[11] = 0;
+                R[12] = 0;     R[13] = 0;     R[14] = 0;    R[15] = 1;
+            }
+        }
+        if (I != null) {
+            // compute the inclination matrix by projecting the geomagnetic
+            // vector onto the Z (gravity) and X (horizontal component
+            // of geomagnetic vector) axes.
+            final float invE = 1.0f / (float) Math.sqrt(Ex * Ex + Ey * Ey + Ez * Ez);
+            final float c = (Ex * Mx + Ey * My + Ez * Mz) * invE;
+            final float s = (Ex * Ax + Ey * Ay + Ez * Az) * invE;
+            if (I.length == 9) {
+                I[0] = 1;     I[1] = 0;     I[2] = 0;
+                I[3] = 0;     I[4] = c;     I[5] = s;
+                I[6] = 0;     I[7] = -s;     I[8] = c;
+            } else if (I.length == 16) {
+                I[0] = 1;     I[1] = 0;     I[2] = 0;
+                I[4] = 0;     I[5] = c;     I[6] = s;
+                I[8] = 0;     I[9] = -s;     I[10] = c;
+                I[3] = I[7] = I[11] = I[12] = I[13] = I[14] = 0;
+                I[15] = 1;
+            }
+        }
+        return true;
     }
 
 }
