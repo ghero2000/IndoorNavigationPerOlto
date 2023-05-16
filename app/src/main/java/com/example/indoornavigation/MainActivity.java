@@ -3,7 +3,6 @@ package com.example.indoornavigation;
 import android.app.Dialog;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.graphics.Color;
 import android.graphics.Matrix;
 import android.graphics.RectF;
 import android.graphics.drawable.Drawable;
@@ -19,6 +18,7 @@ import android.widget.CompoundButton;
 import android.widget.ImageView;
 import android.widget.Switch;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 
@@ -39,7 +39,11 @@ import java.util.Locale;
  */
 
 public class MainActivity extends AppCompatActivity implements SensorEventListener {
+    private int stepCount = 0;
+    private int steppy = 0;
+    private boolean first = true;
     // ATTRIBUTI PER BUSSOLA
+    private Graph.Node nodeSphere;
     private SensorManager sensorManager;
     private Sensor accelerometer;
     private Sensor magnetometer;
@@ -96,7 +100,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
     private List<Graph.Node> path;
 
-    private int stepCount = 0;
+    private float currentRotation = 0f;
 
     private IndoorNavigation indoorNav;
 
@@ -131,7 +135,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         startPoint = findViewById(R.id.starPoint);
         endPoint = findViewById(R.id.endPoint);
 
-        btn_start = findViewById(R.id.btn_start);
+        btn_start = findViewById(R.id.btn_avvia);
         start[0] = false;
 
         map = getResources().getDrawable(R.drawable.planimetria);
@@ -155,7 +159,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         mapDrawer = new MapDrawer(mapBitmap);
         indicatorDrawer = new MapDrawer(indicatorBitmap);
 
-        indoorNav = new IndoorNavigation(mapDrawer, getApplicationContext(), mapImage);
+        indoorNav = new IndoorNavigation(mapDrawer, getApplicationContext(), indicatorDrawer);
 
         //float[] touchPoint = new float[2];
 
@@ -244,10 +248,18 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         btn_start.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (start[0])
+                if (first) {
+                    first = false;
+                    nodeSphere = indoorNav.stepNavigation(path, mapImage, steppy, indicatorImage, start);
+                    steppy ++;
+                }
+                if (start[0]) {
                     start[0] = false;
-                else
+                    disegnaIndicatore(0, 0);
+                }
+                else {
                     start[0] = true;
+                }
             }
         });
 
@@ -264,7 +276,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 }
                 if (path != null) {
                     disegnaPercorso(path);
-                    stepCount = 0;
+                    steppy = 0;
                 }
             }
         });
@@ -286,8 +298,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             @Override
             public void onClick(View view) {
                 clearPath(true);
-                indoorNav.stepNavigation(path, mapImage, stepCount);
-                stepCount ++;
+                nodeSphere = indoorNav.stepNavigation(path, mapImage, steppy, indicatorImage, start);
+                steppy ++;
             }
         });
 
@@ -428,6 +440,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                     disegnaIndicatore(pointX, pointY);
                     position[0] = pointX;
                     position[1] = pointY;
+                    user[0] = true;
+                    userBtn.setBackgroundColor(getResources().getColor(android.R.color.holo_blue_light));
                 }
 
                 Graph.Node node = indoorNav.checkNode(graph, pointX, pointY);
@@ -445,13 +459,13 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                     node_id.setText(node.getId());
                     node_type.setText(node.getRoomType());
 
-                    Button btn_start = dialog.findViewById(R.id.start_btn);
+                    Button btn_starting = dialog.findViewById(R.id.start_btn);
                     Button btn_end = dialog.findViewById(R.id.end_btn);
 
                     Switch sw_crowded = dialog.findViewById(R.id.sw_crowded);
                     Switch sw_available = dialog.findViewById(R.id.sw_available);
 
-                    btn_start.setOnClickListener(new View.OnClickListener() {
+                    btn_starting.setOnClickListener(new View.OnClickListener() {
                         @Override
                         public void onClick(View v) {
                             startPoint.setText(node_id.getText().toString());
@@ -510,8 +524,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         super.onResume();
         sensorManager.registerListener(this, stepSensor, SensorManager.SENSOR_DELAY_NORMAL);
         sensorManager.registerListener(this, orientationSensor, SensorManager.SENSOR_DELAY_NORMAL);
-        sensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_UI);
-        sensorManager.registerListener(this, magnetometer, SensorManager.SENSOR_DELAY_UI);
+        sensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_NORMAL);
+        sensorManager.registerListener(this, magnetometer, SensorManager.SENSOR_DELAY_NORMAL);
     }
 
     @Override
@@ -530,9 +544,17 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             mGravity[0] = alpha * mGravity[0] + (1 - alpha) * event.values[0];
             mGravity[1] = alpha * mGravity[1] + (1 - alpha) * event.values[1];
             mGravity[2] = alpha * mGravity[2] + (1 - alpha) * event.values[2];
+            mGravity[0] = mGravity[0] - event.values[0];
+            mGravity[1] = mGravity[1] - event.values[1];
+            mGravity[2] = mGravity[2] - event.values[2];
+            /*mGravity[0] = 0.09f;
+            mGravity[1] = 0.59f;
+            mGravity[2] = 2.28f;*/
+            //Toast.makeText(this, ""+mGravity[0]+" "+mGravity[1]+" "+mGravity[2], Toast.LENGTH_SHORT).show();
             float x_acceleration = event.values[0];
             float y_acceleration = event.values[1];
             float z_acceleration = event.values[2];
+
             double Magnitude = Math.sqrt(x_acceleration*x_acceleration + y_acceleration*y_acceleration + z_acceleration*z_acceleration);
             double MagnitudeDelta = Magnitude - MagnitudePrevious;
             MagnitudePrevious = Magnitude;
@@ -563,18 +585,25 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             degreeTextView.setText(String.format(Locale.getDefault(), "%.0f°", degrees));
             compassImageView.setRotation(-degrees);
             if (start[0]) {
-                mapImage.setRotation(-degrees);
-                indicatorImage.setRotation(-degrees);
+                mapImage.setRotation(degrees);
+                indicatorImage.setRotation(degrees);
                 double radian = Math.toRadians(degrees);
-                double stepLength = 60;
+                double stepLength = 30;
                 if (is_step[0]) {
                     is_step[0] = false;
                     double deltaX = stepLength * Math.sin(radian);
                     double deltaY = stepLength * Math.cos(radian);
                     if (position[0] != 0) {
-                        position[0] += deltaX;
+                        position[0] -= deltaX;
                         position[1] -= deltaY;
                         disegnaIndicatore(position[0], position[1]);
+                        double dx = Math.abs(position[0]-nodeSphere.getX());
+                        double dy = Math.abs(position[1]-nodeSphere.getY());
+                        if (dx < 50 && dy < 50) {
+                            clearPath(true);
+                            nodeSphere = indoorNav.stepNavigation(path, mapImage, steppy, indicatorImage, start);
+                            steppy ++;
+                        }
                     }
                 }
             }

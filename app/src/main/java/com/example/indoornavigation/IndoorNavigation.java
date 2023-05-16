@@ -4,32 +4,35 @@ import android.content.Context;
 import android.widget.Toast;
 
 import com.github.chrisbanes.photoview.PhotoView;
-import com.google.android.material.textfield.TextInputEditText;
 
 import java.util.LinkedList;
 import java.util.List;
 
 public class IndoorNavigation {
     private MapDrawer mapDrawer;
+    private MapDrawer indicatorDrawer;
 
     private Context context;
 
-    public IndoorNavigation(MapDrawer mapDrawer, Context context, PhotoView mapImage) {
+    public IndoorNavigation(MapDrawer mapDrawer, Context context, MapDrawer indicatorDrawer) {
         this.mapDrawer = mapDrawer;
         this.context = context;
+        this.indicatorDrawer = indicatorDrawer;
     }
 
-    public void stepNavigation(List<Graph.Node> path, PhotoView mapView, int count){
+    public Graph.Node stepNavigation(List<Graph.Node> path, PhotoView mapView, int count, PhotoView indicatorImage, boolean[] start){
 
         if(path == null || path.size() == 0){
 
             Toast.makeText(context  , "Warning: Select a possible path", Toast.LENGTH_SHORT).show();
-            return;
+            return null;
 
         } else if(count + 1   >= path.size()){
 
             Toast.makeText(context  , "you arrived!!", Toast.LENGTH_SHORT).show();
-            clearPath(mapView);
+            start[0] = false;
+            clearPath(mapView, indicatorImage);
+            return null;
 
         }else {
 
@@ -43,6 +46,7 @@ public class IndoorNavigation {
 
             mapDrawer.drawStep(path, mapView, edge);
 
+            return node2;
         }
 
     }
@@ -63,10 +67,13 @@ public class IndoorNavigation {
         return null;
     }
 
-    public void clearPath(PhotoView mapView){
+    public void clearPath(PhotoView mapView, PhotoView indicatorImage){
         mapDrawer.resetMap(); // Aggiungi questa riga per ripristinare la mappa nel MapDrawer
         mapView.setImageBitmap(mapDrawer.getMapBitmap()); // Imposta la nuova mappa ripristinata
         mapView.invalidate(); // Forza il ridisegno della PhotoView
+        indicatorDrawer.resetMap();
+        indicatorImage.setImageBitmap(indicatorDrawer.getMapBitmap());
+        indicatorImage.invalidate();
     }
 
 }
