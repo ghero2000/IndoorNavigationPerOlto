@@ -609,6 +609,11 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                             clearPath(true);
                             nodeSphere = indoorNav.stepNavigation(path, mapImage, steppy, indicatorImage, start);
                             steppy ++;
+                            if (nodeSphere == null) {
+                                btn_start.setVisibility(View.VISIBLE);
+                                showpath = false;
+                                return;
+                            }
                         }
                     }
                 }
