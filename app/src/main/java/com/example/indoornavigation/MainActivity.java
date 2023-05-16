@@ -305,6 +305,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 if (nodeSphere == null) {
                     btn_start.setVisibility(View.VISIBLE);
                     showpath = false;
+                    txt_passi.setText("0");
                 }
             }
         });
@@ -612,6 +613,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                             if (nodeSphere == null) {
                                 btn_start.setVisibility(View.VISIBLE);
                                 showpath = false;
+                                txt_passi.setText("0");
                                 return;
                             }
                         }
