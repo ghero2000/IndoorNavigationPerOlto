@@ -4,6 +4,7 @@ import android.app.Dialog;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Matrix;
+import android.graphics.PointF;
 import android.graphics.RectF;
 import android.graphics.drawable.Drawable;
 import android.hardware.Sensor;
@@ -342,10 +343,20 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     }
 
     private void disegnaIndicatore(float x, float y) {
+        Matrix photoMatrix = new Matrix();
+        indicatorImage.getSuppMatrix(photoMatrix);
+        float[] matrixValues = new float[9];
+        photoMatrix.getValues(matrixValues);
+        float currentScale = matrixValues[Matrix.MSCALE_X];
+        PointF currentTranslate = new PointF(matrixValues[Matrix.MTRANS_X], matrixValues[Matrix.MTRANS_Y]);
         clearPath(indicatorImage);
         TouchTransformer transformer = new TouchTransformer();
         indicatorDrawer.drawIndicator(x, y);
         indicatorImage.invalidate();
+        Matrix newMatrix = new Matrix();
+        newMatrix.setScale(currentScale, currentScale);
+        newMatrix.postTranslate(currentTranslate.x, currentTranslate.y);
+        indicatorImage.setDisplayMatrix(newMatrix);
     }
 
     private void checkOptions() {
