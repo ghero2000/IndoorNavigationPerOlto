@@ -40,6 +40,7 @@ import java.util.Locale;
 
 public class MainActivity extends AppCompatActivity implements SensorEventListener {
     private int stepCount = 0;
+    private boolean showpath = false;
     private int steppy = 0;
     private boolean first = true;
     // ATTRIBUTI PER BUSSOLA
@@ -248,17 +249,17 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         btn_start.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (first) {
-                    first = false;
-                    nodeSphere = indoorNav.stepNavigation(path, mapImage, steppy, indicatorImage, start);
-                    steppy ++;
-                }
+                nodeSphere = indoorNav.stepNavigation(path, mapImage, steppy, indicatorImage, start);
+                steppy ++;
                 if (start[0]) {
                     start[0] = false;
                     disegnaIndicatore(0, 0);
                 }
                 else {
-                    start[0] = true;
+                    if(showpath) {
+                        start[0] = true;
+                        btn_start.setVisibility(View.GONE);
+                    }
                 }
             }
         });
@@ -276,6 +277,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 }
                 if (path != null) {
                     disegnaPercorso(path);
+                    showpath = true;
                     steppy = 0;
                 }
             }
@@ -300,6 +302,10 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 clearPath(true);
                 nodeSphere = indoorNav.stepNavigation(path, mapImage, steppy, indicatorImage, start);
                 steppy ++;
+                if (nodeSphere == null) {
+                    btn_start.setVisibility(View.VISIBLE);
+                    showpath = false;
+                }
             }
         });
 
