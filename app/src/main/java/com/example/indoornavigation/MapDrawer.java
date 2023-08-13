@@ -124,142 +124,20 @@ public class MapDrawer {
         mapCanvas = new Canvas(mapBitmap);
     }
 
-    /**
-     * Effettua uno zoom sulla view in modo tale che il centro del percorso (1/2 X E Y DEI PUNTI DI PARTENZA E ARRIVO)
-     * sia centrato nella view.
-     *
-     * @param mapView La view da zoomare
-     * @param nodes   Lista di nodi che rappresentano il percorso
-     */
-    public void zoomOnPath(PhotoView mapView, List<Graph.Node> nodes) {
-        int lengthNodes = nodes.size();
-
-        Graph.Node start = nodes.get(0);
-        Graph.Node end = nodes.get(lengthNodes - 1);
-
-        float startX = start.getX() * mapBitmap.getWidth();
-        float startY = start.getY() * mapBitmap.getHeight();
-
-        float endX = end.getX() * mapBitmap.getWidth();
-        float endY = end.getY() * mapBitmap.getHeight();
-
-        int centerX;
-        int centerY;
-
-        if (startX <= endX) {
-            centerX = (int) (((Math.abs(startX - endX)) / 2) + startX);
-        } else {
-            centerX = (int) (((Math.abs(startX - endX)) / 2) + endX);
-        }
-
-        if (startY <= endY) {
-            centerY = (int) (((Math.abs(startY - endY)) / 2) + startY);
-        } else {
-            centerY = (int) (((Math.abs(startY - endY)) / 2) + endY);
-        }
-
-        float zoomScale = (mapBitmap.getWidth() * mapBitmap.getHeight()) / (Math.abs(startX - endX) * Math.abs(startY - endY));
-
-        boolean animate = true;
-       /* try {
-            mapView.setScale(zoomScale, animate);
-        } catch (Exception IllegalArgumentException) {
-            mapView.setScale(mapView.getMaximumScale(), animate);
-        }
-        */
-        // Calcola le nuove coordinate centrali in base alle coordinate in pixel
-        /*float newCenterX = centerX / (float) mapBitmap.getWidth();
-        float newCenterY = centerY / (float) mapBitmap.getHeight();
-        */
-
-        int distanceX = (int)((- mapView.getWidth() / 2) + start.getX() * mapView.getWidth()) ;
-        int distanceY = (int)((- mapView.getHeight() / 2) + start.getY() * mapView.getHeight());
-
-        // Sposta la vista all'interno della PhotoView
-        mapView.scrollTo((int) distanceX, (int) distanceY);
-
+    public void drawIndicator(float x, float y) {
+        Paint circlePaint = new Paint();
+        circlePaint.setColor(Color.GREEN);
+        circlePaint.setStyle(Paint.Style.FILL);
+        circlePaint.setAntiAlias(true);
+        mapCanvas.drawCircle(x,y,40,circlePaint);
     }
 
-    public void drawIndicator(float x, float y) {
+    public void drawIndicator(float x4, float y4, boolean b) {
         Paint circlePaint = new Paint();
         circlePaint.setColor(Color.BLUE);
         circlePaint.setStyle(Paint.Style.FILL);
         circlePaint.setAntiAlias(true);
-        mapCanvas.drawCircle(x,y,80,circlePaint);
+        mapCanvas.drawCircle(x4,y4,60, circlePaint);
     }
-
-    public void drawIndicator(float x, float y, int trasparent) {
-        Paint circlePaint = new Paint();
-        circlePaint.setColor(trasparent);
-        circlePaint.setStyle(Paint.Style.FILL);
-        circlePaint.setAntiAlias(true);
-        mapCanvas.drawCircle(x,y,80,circlePaint);
-    }
-
-
-
-
-
-
-
-
-
-
-    /*public void drowLine(PhotoView mapImage){
-
-        mapImage.setOnTouchListener(new View.OnTouchListener() {
-            @Override
-            public boolean onTouch(View view, MotionEvent event) {
-                float startX = -1;
-                float startY = -1;
-                float endX = -1;
-                float endY = -1;
-                float imgX = imageX(event.getX(),  mapImage);
-                float imgY = imageY(event.getY(), mapImage);
-
-                if (event.getAction() == MotionEvent.ACTION_DOWN) {
-                    if (startX == -1 && startY == -1) {
-                        // Imposta il punto di partenza
-                        startX = imgX;
-                        startY = imgY;
-
-                    } else if (endX == -1 && endY == -1) {
-                        // Imposta il punto di arrivo
-                        endX = imgX;
-                        endY = imgY;
-
-                        // Disegna la linea tra i due punti
-                        mapCanvas.drawLine(startX, startY, endX, endY, linePaint);
-                        mapImage.invalidate();
-
-                        Log.d("Coordinate", String.valueOf(startX) + "   " + String.valueOf(startY));
-                        Log.d("Coordinate", String.valueOf(endX) + "   " + String.valueOf(endY));
-
-                        // Reimposta i valori di partenza e arrivo per il prossimo tracciamento
-                        startX = -1;
-                        startY = -1;
-                        endX = -1;
-                        endY = -1;
-                    }
-                }
-                return true;
-            }
-        });
-    }
-
-    private float imageX(float touchX, PhotoView mapImage) {
-        float viewWidth = mapImage.getWidth();
-        float bitmapWidth = mapBitmap.getWidth();
-        float scaleFactor = Math.min((float) viewWidth / bitmapWidth, (float) mapImage.getHeight() / mapBitmap.getHeight());
-        return (touchX - (viewWidth - bitmapWidth * scaleFactor) / 2) / scaleFactor;
-    }
-
-    private float imageY(float touchY, PhotoView mapImage) {
-        float viewHeight = mapImage.getHeight();
-        float bitmapHeight = mapBitmap.getHeight();
-        float scaleFactor = Math.min((float) mapImage.getWidth() / mapBitmap.getWidth(), (float) viewHeight / bitmapHeight);
-        return (touchY - (viewHeight - bitmapHeight * scaleFactor) / 2) / scaleFactor;
-    }*/
-
 }
 
