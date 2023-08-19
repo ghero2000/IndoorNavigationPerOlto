@@ -2,6 +2,7 @@ package com.example.indoornavigation;
 
 import android.graphics.Bitmap;
 import android.util.Log;
+import android.widget.Toast;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -326,7 +327,7 @@ public class Graph {
 
         openSet.add(start);
         gScore.put(start, 0.0);
-        fScore.put(start, calculateHeuristic(start, end));
+        fScore.put(start, calculateHeuristic(start, end, roomType, available, crowd));
 
         while (!openSet.isEmpty()) {
             String current = findLowestFScoreNode(openSet, fScore);
@@ -350,7 +351,7 @@ public class Graph {
                 if (!openSet.contains(neighborId) || tentativeGScore < gScore.get(neighborId)) {
                     cameFrom.put(neighborId, current);
                     gScore.put(neighborId, tentativeGScore);
-                    fScore.put(neighborId, tentativeGScore + calculateHeuristic(neighborId, end));
+                    fScore.put(neighborId, tentativeGScore + calculateHeuristic(neighborId, end, roomType, available, crowd));
 
                     if (!openSet.contains(neighborId)) {
                         openSet.add(neighborId);
@@ -385,7 +386,7 @@ public class Graph {
         }
         return path;
     }
-
+    /*
     private double calculateHeuristic(String nodeId, String end) {
         Node currentNode = nodes.get(nodeId);
         Node endNode = nodes.get(end);
@@ -394,9 +395,29 @@ public class Graph {
         double yDistance = Math.abs(currentNode.getY() - endNode.getY());
 
         return Math.sqrt(xDistance * xDistance + yDistance * yDistance);
+    } */
+
+    private double calculateHeuristic(String nodeId, String end, String roomType, String available, String crowd) {
+        //Log.d("crowd", ""+crowd);
+        Node currentNode = nodes.get(nodeId);
+        Node endNode = nodes.get(end);
+
+        double xDistance = Math.abs(currentNode.getX() - endNode.getX());
+        double yDistance = Math.abs(currentNode.getY() - endNode.getY());
+
+        boolean roomTypeSatisfied = currentNode.getRoomType().equals(roomType);
+        boolean availableSatisfied = currentNode.getAvailability().equals(available);
+        boolean crowdSatisfied = currentNode.getCrowdness().equals(crowd);
+        //Log.d("crowd", ""+crowdSatisfied);
+
+        double penalty = 0.0;
+        if (roomTypeSatisfied || availableSatisfied || crowdSatisfied) {
+            penalty = 14000.0; // Apply a penalty if constraints are not satisfied
+            Log.d("crowd", ""+penalty);
+        }
+
+        return xDistance + yDistance + penalty;
     }
-
-
 
 
     /**

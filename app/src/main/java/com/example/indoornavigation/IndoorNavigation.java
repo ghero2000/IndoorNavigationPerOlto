@@ -51,6 +51,7 @@ public class IndoorNavigation {
 
     }
 
+    /*
     public Graph.Node checkNode(Graph graph, float pointX, float pointY) {
         String id = "1";
         while (graph.getNode(id) != null) {
@@ -63,6 +64,17 @@ public class IndoorNavigation {
             int a = Integer.parseInt(id);
             a++;
             id = String.valueOf(a);
+        }
+        return null;
+    } */
+
+    public Graph.Node checkNode(Graph graph, float pointX, float pointY, List<Coordinate> whitePoints) {
+        for (Coordinate coord : whitePoints) {
+            int x = coord.x;
+            int y = coord.y;
+            if (Math.abs(x - pointX) <= 20 && Math.abs(y - pointY) <= 20) {
+                return graph.getNode(x+"-"+y);
+            }
         }
         return null;
     }

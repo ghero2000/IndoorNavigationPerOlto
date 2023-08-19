@@ -137,6 +137,7 @@ public class MapDrawer {
             Paint circlePaint = new Paint();
             circlePaint.setColor(Color.BLUE);
             circlePaint.setStyle(Paint.Style.FILL);
+            circlePaint.setAlpha(90);
             circlePaint.setAntiAlias(true);
             mapCanvas.drawCircle(x4, y4, (float) radius, circlePaint);
         }
@@ -147,6 +148,17 @@ public class MapDrawer {
             circlePaint.setAntiAlias(true);
             mapCanvas.drawCircle(x4, y4, (float) radius, circlePaint);
         }
+    }
+
+    public void drawIndicator(long x, long y, int i, boolean b1) {
+        Paint paint = new Paint();
+        paint.setColor(Color.YELLOW);
+        paint.setStyle(Paint.Style.FILL);
+        paint.setAlpha(128);
+        //paint.setAlpha(128); // Imposta l'opacità trasparente.
+        float radius = i; // Imposta il raggio del cerchio.
+        paint.setAntiAlias(true);
+        mapCanvas.drawCircle(x, y, radius, paint);
     }
 }
 

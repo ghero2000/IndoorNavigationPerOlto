@@ -31,6 +31,7 @@ import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
@@ -39,6 +40,11 @@ import com.github.chrisbanes.photoview.OnMatrixChangedListener;
 import com.github.chrisbanes.photoview.OnViewTapListener;
 import com.github.chrisbanes.photoview.PhotoView;
 import com.google.android.material.textfield.TextInputEditText;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ValueEventListener;
 
 import org.altbeacon.beacon.Beacon;
 import org.altbeacon.beacon.BeaconConsumer;
@@ -57,7 +63,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Random;
 
 
 /**
@@ -69,6 +74,11 @@ import java.util.Random;
 
 public class MainActivity extends AppCompatActivity implements SensorEventListener, StepListener, BeaconConsumer {
     private int stepCount = 0;
+
+    // Lista per salvare le coordinate dei punti bianchi
+    List<Coordinate> whitePoints = new ArrayList<>();
+    
+    private TextView txt_dij, txt_aStar;
     private BeaconManager beaconManager;
     private int rssi1 = -1;
     private int rssi2 = -1;
@@ -201,6 +211,9 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        txt_dij = findViewById(R.id.txt_dijkstra);
+        txt_aStar = findViewById(R.id.txt_astar);
+
         beaconManager = BeaconManager.getInstanceForApplication(this);
         beaconManager.bind(this);
 
@@ -245,6 +258,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         graph = new Graph(mapBitmap);
         path = null;
 
+        /*
         graph.addNode("1.37",1393f, 2220f, "atrium", "available", "notCrow"); //1.4
         graph.addNode("1.38",1250f, 2210f, "atrium", "available", "notCrow"); //1.4
         graph.addNode("1.39",1093f, 2200f, "atrium", "available", "notCrow"); //1.4
@@ -435,14 +449,14 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         graph.addNode("8.1", (float) 1450.3027 / 3520, (float) 1789.669 / 4186, "hallway", "available", "notCrow");
         graph.addNode("8.2", (float) 1776.2207 / 3520, (float) 1467.081 / 4186, "hallway", "available", "notCrow");
 
-        graph.addNode("9", (float) 2591.0156 / 3520, (float) 1913.4905 / 4186, "atrium", "available", "notCrow");
+        graph.addNode("9", (float) 2591.0156 / 3520, (float) 1913.4905 / 4186, "atrium", "available", "notCrow"); */
 
         // Lista per salvare le coordinate dei punti bianchi
         List<Coordinate> blackPoints = new ArrayList<>();
 
         // Scansione dell'area rettangolare e salvataggio delle coordinate dei punti bianchi
-        for (int y = 269; y < 3600; y=y+15) {
-            for (int x = 778; x < 3097; x=x+15) {
+        for (int y = 480; y < 3280; y=y+15) {
+            for (int x = 815; x < 2875; x=x+15) {
                 int pixelColor = mapBitmap.getPixel(x, y);
                 int red = Color.red(pixelColor);
                 int green = Color.green(pixelColor);
@@ -455,12 +469,9 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             }
         }
 
-        // Lista per salvare le coordinate dei punti bianchi
-        List<Coordinate> whitePoints = new ArrayList<>();
-
         // Scansione dell'area rettangolare e salvataggio delle coordinate dei punti bianchi
-        for (int y = 269; y < 3600; y += 35) {
-            for (int x = 778; x < 3097; x += 35) {
+        for (int y = 480; y < 3280; y += 10) {
+            for (int x = 815; x < 2875; x += 10) {
                 int pixelColor = mapBitmap.getPixel(x, y);
                 int red = Color.red(pixelColor);
                 int green = Color.green(pixelColor);
@@ -475,7 +486,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                         int dx = Math.abs(x - blackPoint.x);
                         int dy = Math.abs(y - blackPoint.y);
 
-                        if (dx <= 50 && dy <= 50) {
+                        if (dx <= 35 && dy <= 35) {
                             isNearBlackPoint = true;
                             break;  // Esci dal ciclo una volta trovato un punto nero vicino
                         }
@@ -495,8 +506,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             int y = coord.y;
             String nodeId = x + "-" + y;
 
-            for (int dy = -35; dy <= 35; dy += 35) {
-                for (int dx = -35; dx <= 35; dx += 35) {
+            for (int dy = -10; dy <= 10; dy += 10) {
+                for (int dx = -10; dx <= 1; dx += 10) {
                     if (dx == 0 && dy == 0) {
                         continue;  // Salta il nodo stesso
                     }
@@ -592,13 +603,25 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 clearPath();
                 //path = graph.findShortestPath(startPoint.getText().toString(), endPoint.getText().toString(), stairs, available, crowd, 10, 100, 0.1, 1.0, 2.0, 100.0);
                 double startTime = System.currentTimeMillis();
-                //path = graph.findShortestPathDijkstra(startPoint.getText().toString(), endPoint.getText().toString(), stairs, available, crowd);
-                path = graph.findShortestPathAStar(startPoint.getText().toString(), endPoint.getText().toString(), stairs, available, crowd);
-                //path = graph.findShortestPath(startPoint.getText().toString(), endPoint.getText().toString(), stairs, available, crowd, 5, 150, 0.1, 10.0, 20.0, 100.0);
+                //path = graph.findShortestPath(startPoint.getText().toString(), endPoint.getText().toString(), stairs, available, crowd);
+                //Toast.makeText(MainActivity.this, ""+path.size(), Toast.LENGTH_SHORT).show();
                 double endTime = System.currentTimeMillis();   // Timestamp finale
                 double elapsedTime = endTime - startTime;
-                Toast.makeText(MainActivity.this, ""+elapsedTime, Toast.LENGTH_SHORT).show();
-                disegnaTutto(whitePoints);
+                //txt_dij.setText(elapsedTime+"");
+                startTime = System.currentTimeMillis();
+                try {
+                    path = graph.findShortestPathAStar(startPoint.getText().toString(), endPoint.getText().toString(), stairs, available, crowd);
+                    //Toast.makeText(MainActivity.this, ""+graph.getNode("1085-2710").getCrowdness(), Toast.LENGTH_SHORT).show();
+                } catch (Exception e) {
+                    //
+                }
+                Toast.makeText(MainActivity.this, ""+path.size(), Toast.LENGTH_SHORT).show();
+                endTime = System.currentTimeMillis();   // Timestamp finale
+                elapsedTime = endTime - startTime;
+                txt_aStar.setText(elapsedTime+"");
+                //path = graph.findShortestPath(startPoint.getText().toString(), endPoint.getText().toString(), stairs, available, crowd, 5, 150, 0.1, 10.0, 20.0, 100.0);
+                //Toast.makeText(MainActivity.this, ""+elapsedTime, Toast.LENGTH_SHORT).show();
+                //disegnaTutto(whitePoints);
                 for (Graph.Node node : path) {
                     Log.d("Node ID", node.getId());
                 }
@@ -662,18 +685,70 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         receiverWifi = new WifiReceiver();
         registerReceiver(receiverWifi, new
                 IntentFilter(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION));
-        checkPoint(graph, touchTransformer, indicatorImage);
+        checkPoint(graph, touchTransformer, indicatorImage, whitePoints);
         handler = new Handler();
         startScanWithInterval();
+        // Avvia il thread per eseguire checkCrowd() in background con un loop
+        Thread thread = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                while (!Thread.currentThread().isInterrupted()) {
+                    checkCrowd(whitePoints);
+
+                    try {
+                        Thread.sleep(6000); // Attendi 3 secondi
+                    } catch (InterruptedException e) {
+                        // Gestisci l'interruzione del thread, se necessario
+                        Thread.currentThread().interrupt(); // Reimposta il flag interrotto
+                    }
+                }
+            }
+        });
+        thread.start();
+    }
+
+    private void checkCrowd(List<Coordinate> whitePoints) {
+        DatabaseReference databaseReference = FirebaseDatabase.getInstance().getReference("coordinate");
+        //Toast.makeText(this, ""+databaseReference.getKey(), Toast.LENGTH_SHORT).show();
+        databaseReference.addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
+                if (dataSnapshot.exists()) {
+                    //Toast.makeText(MainActivity.this, "esisti", Toast.LENGTH_SHORT).show();
+                    long x = dataSnapshot.child("x").getValue(Long.class);
+                    long y = dataSnapshot.child("y").getValue(Long.class);
+
+                    // Ora hai i valori x e y, puoi procedere con il disegno.
+                    disegnaIndicatore(x, y, 110, true, whitePoints, path);
+                    updateCrowdedness(x, y, 110);
+                }
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError databaseError) {
+                // Gestisci l'errore
+            }
+        });
+
+    }
+
+    private void updateCrowdedness(long x, long y, int radius) {
+        for (Coordinate coord : whitePoints) {
+            int dx = Math.abs((int) x - coord.x);
+            int dy = Math.abs((int) y - coord.y);
+
+            if (dx * dx + dy * dy <= radius * radius) {
+                // Nodo all'interno del raggio
+                graph.getNode(coord.x+"-"+coord.y).setCrowdness("crowded");
+            }
+        }
     }
 
     private void disegnaTutto(List<Coordinate> whitePoints) {
-        Random random = new Random();
-        int randomIndex = random.nextInt(whitePoints.size());
-        Toast.makeText(this, ""+whitePoints.get(randomIndex).x+" "+whitePoints.get(randomIndex).y , Toast.LENGTH_SHORT).show();
         for (Coordinate point : whitePoints) {
             indicatorDrawer.drawIndicator(point.x, point.y, true, 5);
         }
+        /*
         indicatorDrawer.drawIndicator(1013f, 2745f, true, 20);
         indicatorDrawer.drawIndicator(1170f, 2745f, true, 20);
         indicatorDrawer.drawIndicator(1313f, 2745f, true, 20); //1
@@ -723,7 +798,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         indicatorDrawer.drawIndicator(2147f, 2420f, true, 20);
         indicatorDrawer.drawIndicator(2304f, 2440f, true, 20); //2
         indicatorDrawer.drawIndicator(2461f, 2460f, true, 20);
-        indicatorDrawer.drawIndicator(2618f, 2480f, true, 20);
+        indicatorDrawer.drawIndicator(2618f, 2480f, true, 20); */
     }
 
     private void startScanWithInterval() {
@@ -746,6 +821,26 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         clearPath(indicatorImage);
         TouchTransformer transformer = new TouchTransformer();
         indicatorDrawer.drawIndicator(x, y);
+        indicatorImage.invalidate();
+        Matrix newMatrix = new Matrix();
+        newMatrix.setScale(currentScale, currentScale);
+        newMatrix.postTranslate(currentTranslate.x, currentTranslate.y);
+        indicatorImage.setDisplayMatrix(newMatrix);
+    }
+
+    private void disegnaIndicatore(long x, long y, int i, boolean b, List<Coordinate> whitePoints, List<Graph.Node> nodes) {
+        Matrix photoMatrix = new Matrix();
+        indicatorImage.getSuppMatrix(photoMatrix);
+        float[] matrixValues = new float[9];
+        photoMatrix.getValues(matrixValues);
+        float currentScale = matrixValues[Matrix.MSCALE_X];
+        PointF currentTranslate = new PointF(matrixValues[Matrix.MTRANS_X], matrixValues[Matrix.MTRANS_Y]);
+        clearPath(indicatorImage);
+        TouchTransformer transformer = new TouchTransformer();
+        disegnaTutto(whitePoints);
+        indicatorDrawer.drawIndicator(x, y, i, true);
+        mapDrawer.drawPath(nodes, mapImage, true);
+        mapImage.invalidate();
         indicatorImage.invalidate();
         Matrix newMatrix = new Matrix();
         newMatrix.setScale(currentScale, currentScale);
@@ -860,16 +955,16 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         image.invalidate(); // Forza il ridisegno della PhotoView
     }
 
-    public void checkPoint(Graph graph, TouchTransformer touchTransformer, PhotoView indicatorImage) {
+    public void checkPoint(Graph graph, TouchTransformer touchTransformer, PhotoView indicatorImage, List<Coordinate> whitePoints) {
         indicatorImage.setOnViewTapListener(new OnViewTapListener() {
             @Override
             public void onViewTap(View view, float x, float y) {
                 //879 1091
                 float pointX = touchTransformer.transformX(x, indicatorImage, indicatorBitmap);
                 float pointY = touchTransformer.transformY(y, indicatorImage, indicatorBitmap);
-                Toast.makeText(MainActivity.this, pointX+"  "+pointY, Toast.LENGTH_SHORT).show();
+                //Toast.makeText(MainActivity.this, pointX+"  "+pointY, Toast.LENGTH_SHORT).show();
 
-                Graph.Node node = indoorNav.checkNode(graph, pointX, pointY);
+                Graph.Node node = indoorNav.checkNode(graph, pointX, pointY, whitePoints);
                 final Dialog dialog = new Dialog(MainActivity.this);
 
                 //  Imposta il layout del tuo dialog personalizzato
