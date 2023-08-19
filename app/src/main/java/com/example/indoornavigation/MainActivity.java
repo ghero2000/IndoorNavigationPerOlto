@@ -8,6 +8,7 @@ import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Color;
 import android.graphics.Matrix;
 import android.graphics.PointF;
 import android.graphics.RectF;
@@ -20,6 +21,7 @@ import android.net.wifi.ScanResult;
 import android.net.wifi.WifiManager;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.RemoteException;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
@@ -38,13 +40,24 @@ import com.github.chrisbanes.photoview.OnViewTapListener;
 import com.github.chrisbanes.photoview.PhotoView;
 import com.google.android.material.textfield.TextInputEditText;
 
+import org.altbeacon.beacon.Beacon;
+import org.altbeacon.beacon.BeaconConsumer;
+import org.altbeacon.beacon.BeaconManager;
+import org.altbeacon.beacon.BeaconParser;
+import org.altbeacon.beacon.RangeNotifier;
+import org.altbeacon.beacon.Region;
+
+import java.text.DecimalFormat;
 import java.util.AbstractMap;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Deque;
-import java.util.Iterator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.Random;
 
 
 /**
@@ -54,8 +67,9 @@ import java.util.Locale;
  * le classi MapDrawer e Graph per la logica implementatiiva vera a propria.
  */
 
-public class MainActivity extends AppCompatActivity implements SensorEventListener, StepListener {
+public class MainActivity extends AppCompatActivity implements SensorEventListener, StepListener, BeaconConsumer {
     private int stepCount = 0;
+    private BeaconManager beaconManager;
     private int rssi1 = -1;
     private int rssi2 = -1;
     private int rssi3 = -1;
@@ -106,6 +120,9 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private MapDrawer mapDrawer;
     // Un'istanza di MapDrawer per disegnare indicatori utente sulla mappa
     private MapDrawer indicatorDrawer;
+
+    private Map<String, Integer> uuidToRssiMap = new HashMap<>();
+    private Map<String, Double> uuidToDistanceMap = new HashMap<>();
 
     private Drawable map;
     private Drawable indicator;
@@ -167,8 +184,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private int maxStepTime = 2000;
     private int averagingTimeIntervalMs = 2500;
     private int filterTimeIntervalMs = 200;
-    private double x1 = 1027, x2 = 2578, x3 = 2370;
-    private double y1 = 2450, y2 = 1810, y3 = 3180;
+    private double x1 = 1027, x2 = 2578, x3 = 2370, x5 = 2268, x6 = 2004;
+    private double y1 = 2450, y2 = 1810, y3 = 3180, y5 = 2599, y6 = 2930;
     private Handler handler;
     private int numSteps;
 
@@ -183,6 +200,9 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        beaconManager = BeaconManager.getInstanceForApplication(this);
+        beaconManager.bind(this);
 
         stepTextView = findViewById(R.id.txt_passi);
         stepTextView.setText("0");
@@ -225,12 +245,177 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         graph = new Graph(mapBitmap);
         path = null;
 
-        graph.addNode("1", (float) 2020.6055 / 3520, (float) 1991.6936 / 4186, "atrium", "available", "notCrow");
-        graph.addNode("1.1", (float) 2278.0957 / 3520, (float) 1913.4905 / 4186, "atrium", "available", "notCrow");
-        graph.addNode("1.2", (float) 1769.668 / 3520, (float) 1773.3766 / 4186, "atrium", "available", "notCrow");
+        graph.addNode("1.37",1393f, 2220f, "atrium", "available", "notCrow"); //1.4
+        graph.addNode("1.38",1250f, 2210f, "atrium", "available", "notCrow"); //1.4
+        graph.addNode("1.39",1093f, 2200f, "atrium", "available", "notCrow"); //1.4
 
-        graph.addNode("2", (float) 1965.1758 / 3520, (float) 2835.8684 / 4186, "atrium", "available", "notCrow");
-        graph.addNode("2.1", (float) 1776.2207 / 3520, (float) 2523.056 / 4186, "atrium", "available", "notCrow");
+        graph.addEdge("1.37", "1.38", 1);
+        graph.addEdge("1.38", "1.39", 1);
+
+
+        graph.addNode("1.4",1013f, 2745f, "atrium", "available", "notCrow"); //1.4
+        graph.addNode("1.3",1170f, 2745f, "atrium", "available", "notCrow"); //1.3
+        graph.addNode("1",1313f, 2745f, "atrium", "available", "notCrow"); //1
+        graph.addNode("1.1",1470f, 2745f, "atrium", "available", "notCrow"); //1.1
+        graph.addNode("1.2",1613f, 2745f, "atrium", "available", "notCrow"); //1.2
+
+        graph.addNode("1.9",983f, 2885f, "atrium", "available", "notCrow"); //1.4
+        graph.addNode("1.8",1140f, 2885f, "atrium", "available", "notCrow"); //1.3
+        graph.addNode("1.5",1283f, 2885f, "atrium", "available", "notCrow"); //1
+        graph.addNode("1.6",1440f, 2885f, "atrium", "available", "notCrow"); //1.1
+        graph.addNode("1.7",1583f, 2885f, "atrium", "available", "notCrow"); //1.2
+
+        graph.addNode("1.15",993f, 3025f, "atrium", "available", "notCrow");
+        graph.addNode("1.14",1120f, 3025f, "atrium", "available", "notCrow");
+        graph.addNode("1.11",1253f, 3025f, "atrium", "available", "notCrow");
+        graph.addNode("1.12",1420f, 3025f, "atrium", "available", "notCrow");
+        graph.addNode("1.13",1553f, 3025f, "atrium", "available", "notCrow");
+
+        graph.addNode("1.19",1110f, 3165f, "atrium", "available", "notCrow");
+        graph.addNode("1.16",1253f, 3165f, "atrium", "available", "notCrow");
+        graph.addNode("1.17",1390f, 3165f, "atrium", "available", "notCrow");
+        graph.addNode("1.18",1523f, 3165f, "atrium", "available", "notCrow");
+
+        graph.addNode("1.25",1033f, 2605f, "atrium", "available", "notCrow");
+        graph.addNode("1.24",1190f, 2605f, "atrium", "available", "notCrow");
+        graph.addNode("1.21",1333f, 2605f, "atrium", "available", "notCrow");
+        graph.addNode("1.22",1490f, 2605f, "atrium", "available", "notCrow");
+        graph.addNode("1.23",1633f, 2605f, "atrium", "available", "notCrow");
+
+        graph.addNode("1.31",1053f, 2465f, "atrium", "available", "notCrow");
+        graph.addNode("1.29",1210f, 2465f, "atrium", "available", "notCrow");
+        graph.addNode("1.26",1353f, 2465f, "atrium", "available", "notCrow");
+        graph.addNode("1.27",1510f, 2465f, "atrium", "available", "notCrow");
+        graph.addNode("1.28",1653f, 2465f, "atrium", "available", "notCrow");
+
+        graph.addNode("1.36",1073f, 2325f, "atrium", "available", "notCrow");
+        graph.addNode("1.35",1230f, 2325f, "atrium", "available", "notCrow");
+        graph.addNode("1.32",1373f, 2325f, "atrium", "available", "notCrow");
+        graph.addNode("1.33",1530f, 2325f, "atrium", "available", "notCrow");
+        graph.addNode("1.34",1673f, 2325f, "atrium", "available", "notCrow");
+
+        graph.addEdge("1.32", "1.33",1);
+        graph.addEdge("1.33", "1.34",1);
+        graph.addEdge("1.32", "1.35",1);
+        graph.addEdge("1.36", "1.35",1);
+        graph.addEdge("1.26", "1.32",1);
+        graph.addEdge("1.26", "1.33",2);
+        graph.addEdge("1.26", "1.35",2);
+        graph.addEdge("1.27", "1.32",2);
+        graph.addEdge("1.27", "1.33",1);
+        graph.addEdge("1.27", "1.34",2);
+        graph.addEdge("1.28", "1.34",1);
+        graph.addEdge("1.28", "1.33",2);
+        graph.addEdge("1.29", "1.32",2);
+        graph.addEdge("1.29", "1.35",1);
+        graph.addEdge("1.29", "1.36",2);
+        graph.addEdge("1.31", "1.35",2);
+        graph.addEdge("1.31", "1.36",1);
+
+        graph.addEdge("1.21", "1.26", 1);
+        graph.addEdge("1.21", "1.27", 2);
+        graph.addEdge("1.21", "1.29", 2);
+        graph.addEdge("1.22", "1.26", 2);
+        graph.addEdge("1.22", "1.27", 1);
+        graph.addEdge("1.22", "1.28", 2);
+        graph.addEdge("1.23", "1.27", 2);
+        graph.addEdge("1.23", "1.28", 1);
+        graph.addEdge("1.24", "1.26", 2);
+        graph.addEdge("1.24", "1.29", 1);
+        graph.addEdge("1.24", "1.31", 2);
+        graph.addEdge("1.25", "1.29", 2);
+        graph.addEdge("1.25", "1.31", 1);
+
+        graph.addEdge("1", "1.21", 1);
+        graph.addEdge("1", "1.24", 2);
+        graph.addEdge("1", "1.22", 2);
+        graph.addEdge("1.1", "1.21", 2);
+        graph.addEdge("1.1", "1.22", 1);
+        graph.addEdge("1.1", "1.23", 2);
+        graph.addEdge("1.2", "1.22", 2);
+        graph.addEdge("1.2", "1.23", 1);
+        graph.addEdge("1.3", "1.21", 2);
+        graph.addEdge("1.3", "1.24", 1);
+        graph.addEdge("1.3", "1.25", 2);
+        graph.addEdge("1.4", "1.24", 2);
+        graph.addEdge("1.4", "1.25", 1);
+
+        graph.addEdge("1.11", "1.16", 1);
+        graph.addEdge("1.11", "1.19", 2);
+        graph.addEdge("1.11", "1.17", 2);
+        graph.addEdge("1.12", "1.16", 2);
+        graph.addEdge("1.12", "1.17", 1);
+        graph.addEdge("1.12", "1.18", 2);
+        graph.addEdge("1.13", "1.17", 2);
+        graph.addEdge("1.13", "1.18", 1);
+        graph.addEdge("1.14", "1.16", 2);
+        graph.addEdge("1.14", "1.19", 1);
+        graph.addEdge("1.15", "1.19", 2);
+        graph.addEdge("1", "1.1", 1);
+        graph.addEdge("1", "1.3", 1);
+        graph.addEdge("1.2", "1.1", 1);
+        graph.addEdge("1.4", "1.3", 1);
+        graph.addEdge("1", "1.5", 1);
+        graph.addEdge("1", "1.6", 2);
+        graph.addEdge("1", "1.8", 2);
+        graph.addEdge("1.1", "1.5", 2);
+        graph.addEdge("1.1", "1.6", 1);
+        graph.addEdge("1.1", "1.7", 2);
+        graph.addEdge("1.2", "1.6", 2);
+        graph.addEdge("1.2", "1.7", 1);
+        graph.addEdge("1.3", "1.5", 2);
+        graph.addEdge("1.3", "1.8", 1);
+        graph.addEdge("1.3", "1.9", 2);
+        graph.addEdge("1.4", "1.8", 2);
+        graph.addEdge("1.4", "1.9", 1);
+        graph.addEdge("1.5", "1.11", 1);
+        graph.addEdge("1.5", "1.12", 2);
+        graph.addEdge("1.5", "1.14", 2);
+        graph.addEdge("1.6", "1.11", 2);
+        graph.addEdge("1.6", "1.12", 1);
+        graph.addEdge("1.6", "1.13", 1);
+        graph.addEdge("1.7", "1.12", 2);
+        graph.addEdge("1.7", "1.13", 1);
+        graph.addEdge("1.8", "1.11", 2);
+        graph.addEdge("1.8", "1.14", 1);
+        graph.addEdge("1.8", "1.15", 2);
+        graph.addEdge("1.9", "1.14", 2);
+        graph.addEdge("1.9", "1.15", 1);
+
+        graph.addEdge("1.5", "1.6", 1);
+        graph.addEdge("1.6", "1.7", 1);
+        graph.addEdge("1.5", "1.8", 1);
+        graph.addEdge("1.8", "1.9", 1);
+        graph.addEdge("1.11", "1.12", 1);
+        graph.addEdge("1.12", "1.13", 1);
+        graph.addEdge("1.12", "1.13", 1);
+        graph.addEdge("1.11", "1.14", 1);
+        graph.addEdge("1.15", "1.14", 1);
+        graph.addEdge("1.16", "1.17", 1);
+        graph.addEdge("1.16", "1.19", 1);
+        graph.addEdge("1.17", "1.18", 1);
+        graph.addEdge("1.21", "1.22", 1);
+        graph.addEdge("1.21", "1.24", 1);
+        graph.addEdge("1.22", "1.23", 1);
+        graph.addEdge("1.24", "1.25", 1);
+        graph.addEdge("1.26", "1.27", 1);
+        graph.addEdge("1.26", "1.29", 1);
+        graph.addEdge("1.27", "1.28", 1);
+        graph.addEdge("1.29", "1.31", 1);
+        graph.addEdge("1.32", "1.37", 1);
+        graph.addEdge("1.32", "1.38", 2);
+        graph.addEdge("1.33", "1.37", 2);
+        graph.addEdge("1.35", "1.37", 2);
+        graph.addEdge("1.35", "1.38", 1);
+        graph.addEdge("1.35", "1.39", 2);
+        graph.addEdge("1.36", "1.39", 1);
+        graph.addEdge("1.36", "1.38", 2);
+
+
+
+        graph.addNode("2", (float) 2147, (float) 2420, "atrium", "available", "notCrow");
+
+        graph.addNode("2.1", (float) 1553, (float) 2363, "atrium", "available", "notCrow");
 
         graph.addNode("3", (float) 866.89453 / 3520, (float) 2128.549 / 4186, "classroom", "available", "notCrow");
         graph.addNode("3.1", (float) 1450.3027 / 3520, (float) 2089.4475 / 4186, "classroom", "available", "notCrow");
@@ -252,7 +437,89 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
         graph.addNode("9", (float) 2591.0156 / 3520, (float) 1913.4905 / 4186, "atrium", "available", "notCrow");
 
-        graph.addEdge("1", "7", 1);    ////////////////////////////////////////// cancellare
+        // Lista per salvare le coordinate dei punti bianchi
+        List<Coordinate> blackPoints = new ArrayList<>();
+
+        // Scansione dell'area rettangolare e salvataggio delle coordinate dei punti bianchi
+        for (int y = 269; y < 3600; y=y+15) {
+            for (int x = 778; x < 3097; x=x+15) {
+                int pixelColor = mapBitmap.getPixel(x, y);
+                int red = Color.red(pixelColor);
+                int green = Color.green(pixelColor);
+                int blue = Color.blue(pixelColor);
+
+                // Esempio di controllo per determinare se il pixel è bianco o simile
+                if (red <= 200 && green <= 200 && blue <= 200) {
+                    blackPoints.add(new Coordinate(x, y));
+                }
+            }
+        }
+
+        // Lista per salvare le coordinate dei punti bianchi
+        List<Coordinate> whitePoints = new ArrayList<>();
+
+        // Scansione dell'area rettangolare e salvataggio delle coordinate dei punti bianchi
+        for (int y = 269; y < 3600; y += 35) {
+            for (int x = 778; x < 3097; x += 35) {
+                int pixelColor = mapBitmap.getPixel(x, y);
+                int red = Color.red(pixelColor);
+                int green = Color.green(pixelColor);
+                int blue = Color.blue(pixelColor);
+
+                // Controllo per determinare se il pixel è bianco o simile
+                if (red > 200 && green > 200 && blue > 200) {
+                    boolean isNearBlackPoint = false;
+
+                    // Controlla se il punto bianco è vicino a un punto nero
+                    for (Coordinate blackPoint : blackPoints) {
+                        int dx = Math.abs(x - blackPoint.x);
+                        int dy = Math.abs(y - blackPoint.y);
+
+                        if (dx <= 50 && dy <= 50) {
+                            isNearBlackPoint = true;
+                            break;  // Esci dal ciclo una volta trovato un punto nero vicino
+                        }
+                    }
+
+                    if (!isNearBlackPoint) {
+                        whitePoints.add(new Coordinate(x, y));
+                        graph.addNode(x + "-" + y, x, y, "atrium", "available", "notCrow");
+                    }
+                }
+            }
+        }
+
+
+        for (Coordinate coord : whitePoints) {
+            int x = coord.x;
+            int y = coord.y;
+            String nodeId = x + "-" + y;
+
+            for (int dy = -35; dy <= 35; dy += 35) {
+                for (int dx = -35; dx <= 35; dx += 35) {
+                    if (dx == 0 && dy == 0) {
+                        continue;  // Salta il nodo stesso
+                    }
+
+                    int adjacentX = x + dx;
+                    int adjacentY = y + dy;
+                    String adjacentNodeId = adjacentX + "-" + adjacentY;
+
+                    String startNodeId = x + "-" + y;
+
+                    // Verifica che il nodo associato alle coordinate sia presente nella lista dei nodi
+                    if (graph.getNode(startNodeId) != null && graph.getNode(adjacentNodeId) != null) {
+                        // Aggiungi l'arco tra i nodi
+                        graph.addEdge(startNodeId, adjacentNodeId, 1);
+                    }
+                }
+            }
+        }
+
+
+
+
+        /*graph.addEdge("1", "7", 1);    ////////////////////////////////////////// cancellare
         graph.addEdge("7", "6", 1);    ////////////////////////////////////////// cancellare
 
         graph.addEdge("1", "1.1", 1);
@@ -287,9 +554,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
         graph.addEdge("7", "8.2", 1);
 
-        graph.addEdge("9", "1.1", 1);
-
-        Graph.Node nodeA = graph.getNode("A");
+        graph.addEdge("9", "1.1", 1); */
 
         mapImage = findViewById(R.id.map_image);
         mapImage.setImageDrawable(map);
@@ -325,10 +590,21 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             @Override
             public void onClick(View view) {
                 clearPath();
-                path = graph.findShortestPath(startPoint.getText().toString(), endPoint.getText().toString(), stairs, available, crowd);
+                //path = graph.findShortestPath(startPoint.getText().toString(), endPoint.getText().toString(), stairs, available, crowd, 10, 100, 0.1, 1.0, 2.0, 100.0);
+                double startTime = System.currentTimeMillis();
+                //path = graph.findShortestPathDijkstra(startPoint.getText().toString(), endPoint.getText().toString(), stairs, available, crowd);
+                path = graph.findShortestPathAStar(startPoint.getText().toString(), endPoint.getText().toString(), stairs, available, crowd);
+                //path = graph.findShortestPath(startPoint.getText().toString(), endPoint.getText().toString(), stairs, available, crowd, 5, 150, 0.1, 10.0, 20.0, 100.0);
+                double endTime = System.currentTimeMillis();   // Timestamp finale
+                double elapsedTime = endTime - startTime;
+                Toast.makeText(MainActivity.this, ""+elapsedTime, Toast.LENGTH_SHORT).show();
+                disegnaTutto(whitePoints);
+                for (Graph.Node node : path) {
+                    Log.d("Node ID", node.getId());
+                }
                 try {
+                    path.get(0);
                     path.get(1);
-                    path.get(2);
                 } catch (Exception e) {
                     path = null;
                 }
@@ -391,6 +667,65 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         startScanWithInterval();
     }
 
+    private void disegnaTutto(List<Coordinate> whitePoints) {
+        Random random = new Random();
+        int randomIndex = random.nextInt(whitePoints.size());
+        Toast.makeText(this, ""+whitePoints.get(randomIndex).x+" "+whitePoints.get(randomIndex).y , Toast.LENGTH_SHORT).show();
+        for (Coordinate point : whitePoints) {
+            indicatorDrawer.drawIndicator(point.x, point.y, true, 5);
+        }
+        indicatorDrawer.drawIndicator(1013f, 2745f, true, 20);
+        indicatorDrawer.drawIndicator(1170f, 2745f, true, 20);
+        indicatorDrawer.drawIndicator(1313f, 2745f, true, 20); //1
+        indicatorDrawer.drawIndicator(1470f, 2745f, true, 20);
+        indicatorDrawer.drawIndicator(1613f, 2745f, true, 20);
+
+        indicatorDrawer.drawIndicator(983f, 2885f, true, 20);
+        indicatorDrawer.drawIndicator(1140f, 2885f, true, 20);
+        indicatorDrawer.drawIndicator(1283f, 2885f, true, 20); //1
+        indicatorDrawer.drawIndicator(1440f, 2885f, true, 20);
+        indicatorDrawer.drawIndicator(1583f, 2885f, true, 20);
+
+        indicatorDrawer.drawIndicator(993f, 3025f, true, 20);
+        indicatorDrawer.drawIndicator(1120f, 3025f, true, 20);
+        indicatorDrawer.drawIndicator(1253f, 3025f, true, 20); //1
+        indicatorDrawer.drawIndicator(1420f, 3025f, true, 20);
+        indicatorDrawer.drawIndicator(1553f, 3025f, true, 20);
+
+        indicatorDrawer.drawIndicator(1110f, 3165f, true, 20);
+        indicatorDrawer.drawIndicator(1253f, 3165f, true, 20); //1
+        indicatorDrawer.drawIndicator(1390f, 3165f, true, 20);
+        indicatorDrawer.drawIndicator(1523f, 3165f, true, 20);
+
+        indicatorDrawer.drawIndicator(1033f, 2605f, true, 20);
+        indicatorDrawer.drawIndicator(1190f, 2605f, true, 20);
+        indicatorDrawer.drawIndicator(1333f, 2605f, true, 20); //1
+        indicatorDrawer.drawIndicator(1490f, 2605f, true, 20);
+        indicatorDrawer.drawIndicator(1633f, 2605f, true, 20);
+
+        indicatorDrawer.drawIndicator(1053f, 2465f, true, 20);
+        indicatorDrawer.drawIndicator(1210f, 2465f, true, 20);
+        indicatorDrawer.drawIndicator(1353f, 2465f, true, 20); //1
+        indicatorDrawer.drawIndicator(1510f, 2465f, true, 20);
+        indicatorDrawer.drawIndicator(1653f, 2465f, true, 20);
+
+        indicatorDrawer.drawIndicator(1073f, 2325f, true, 20);
+        indicatorDrawer.drawIndicator(1230f, 2325f, true, 20);
+        indicatorDrawer.drawIndicator(1373f, 2325f, true, 20); //1
+        indicatorDrawer.drawIndicator(1530f, 2325f, true, 20);
+        indicatorDrawer.drawIndicator(1673f, 2325f, true, 20);
+
+        indicatorDrawer.drawIndicator(1093f, 2200f, true, 20);
+        indicatorDrawer.drawIndicator(1250f, 2210f, true, 20);
+        indicatorDrawer.drawIndicator(1393f, 2220f, true, 20); //1
+
+        indicatorDrawer.drawIndicator(1734f, 2404f, true, 20);
+        indicatorDrawer.drawIndicator(2147f, 2420f, true, 20);
+        indicatorDrawer.drawIndicator(2304f, 2440f, true, 20); //2
+        indicatorDrawer.drawIndicator(2461f, 2460f, true, 20);
+        indicatorDrawer.drawIndicator(2618f, 2480f, true, 20);
+    }
+
     private void startScanWithInterval() {
         handler.postDelayed(new Runnable() {
             @Override
@@ -418,7 +753,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         indicatorImage.setDisplayMatrix(newMatrix);
     }
 
-    private void disegnaIndicatore(double x1, double y1, double x2, double y2, double x3, double y3, double x4, double y4) {
+    private void disegnaIndicatore(double x1, double y1, double x2, double y2, double x3, double y3, double x4, double y4, double dist1, double dist2, double dist3) {
         Matrix photoMatrix = new Matrix();
         indicatorImage.getSuppMatrix(photoMatrix);
         float[] matrixValues = new float[9];
@@ -426,11 +761,14 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         float currentScale = matrixValues[Matrix.MSCALE_X];
         PointF currentTranslate = new PointF(matrixValues[Matrix.MTRANS_X], matrixValues[Matrix.MTRANS_Y]);
         clearPath(indicatorImage);
-        TouchTransformer transformer = new TouchTransformer();
-        indicatorDrawer.drawIndicator((float) x1, (float) y1);
-        indicatorDrawer.drawIndicator((float) x2, (float) y2);
+        //TouchTransformer transformer = new TouchTransformer();
+        indicatorDrawer.drawIndicator((float) x1, (float) y1); //ex x6 y6
+        indicatorDrawer.drawIndicator((float) x2, (float) y2); //ex x5 y5
         indicatorDrawer.drawIndicator((float) x3, (float) y3);
-        indicatorDrawer.drawIndicator((float) x4, (float) y4, true);
+        indicatorDrawer.drawIndicator((float) x4, (float) y4, true, 60);
+        indicatorDrawer.drawIndicator((float) x1, (float) y1, false, dist1  * 220);
+        indicatorDrawer.drawIndicator((float) x2, (float) y2, false, dist2  * 220);
+        indicatorDrawer.drawIndicator((float) x3, (float) y3, false, dist3  * 220);
         indicatorImage.invalidate();
         Matrix newMatrix = new Matrix();
         newMatrix.setScale(currentScale, currentScale);
@@ -529,7 +867,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 //879 1091
                 float pointX = touchTransformer.transformX(x, indicatorImage, indicatorBitmap);
                 float pointY = touchTransformer.transformY(y, indicatorImage, indicatorBitmap);
-                //Toast.makeText(MainActivity.this, ""+pointX+"  "+pointY, Toast.LENGTH_SHORT).show();
+                Toast.makeText(MainActivity.this, pointX+"  "+pointY, Toast.LENGTH_SHORT).show();
 
                 Graph.Node node = indoorNav.checkNode(graph, pointX, pointY);
                 final Dialog dialog = new Dialog(MainActivity.this);
@@ -614,6 +952,33 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                     1);
         } else {
             // Permission already granted, proceed with getting WiFi scan results
+            startBeaconScanning();
+        }
+    }
+
+    private void startBeaconScanning() {
+        BeaconManager beaconManager = BeaconManager.getInstanceForApplication(this);
+
+        // Definisci i layout dei beacon che vuoi rilevare
+        beaconManager.getBeaconParsers().clear();
+        beaconManager.getBeaconParsers().add(new BeaconParser().setBeaconLayout(BeaconParser.ALTBEACON_LAYOUT));
+        beaconManager.getBeaconParsers().add(new BeaconParser().setBeaconLayout("m:2-3=0215,i:4-19,i:20-21,i:22-23,p:24-24"));
+
+        beaconManager.bind(this);
+
+        // Aggiungi un RangeNotifier per gestire i risultati della scansione
+        beaconManager.addRangeNotifier(new RangeNotifier() {
+            @Override
+            public void didRangeBeaconsInRegion(Collection<Beacon> beacons, Region region) {
+                // Gestisci i risultati della scansione qui
+            }
+        });
+
+        try {
+            // Avvia la scansione dei beacon nella regione specificata
+            beaconManager.startRangingBeaconsInRegion(new Region("myRangingUniqueId", null, null, null));
+        } catch (RemoteException e) {
+            e.printStackTrace();
         }
     }
 
@@ -670,6 +1035,12 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         } else {
             return null;
         }
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        beaconManager.unbind(this);
     }
 
     @Override
@@ -858,7 +1229,14 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                         position[0] -= deltaX;
                         position[1] -= deltaY;
                         //Toast.makeText(this, ""+Toast[0], Toast.LENGTH_SHORT).show();
-                        disegnaIndicatore(x1, y1, x2, y2, x3, y3, position[0], position[1]);
+                        try {
+                            disegnaIndicatore(x1, y1, x2, y2, x3, y3, position[0], position[1],
+                                    uuidToDistanceMap.get("2f234454-cf6d-4a0f-adf2-f4911ba9ffa1"),
+                                    uuidToDistanceMap.get("2f234454-cf6d-4a0f-adf2-f4911ba9ffa2"),
+                                    uuidToDistanceMap.get("2f234454-cf6d-4a0f-adf2-f4911ba9ffa6"));
+                        } catch (Exception e) {
+                            //
+                        }
                         /*double dx = Math.abs(Toast[0]-nodeSphere.getX());
                         double dy = Math.abs(Toast[1]-nodeSphere.getY());
                         if (dx < 50 && dy < 50) {
@@ -892,6 +1270,53 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         numSteps++;
         isStep = true;
         stepTextView.setText("" + numSteps);
+    }
+
+    @Override
+    public void onBeaconServiceConnect() {
+        beaconManager.addRangeNotifier(new RangeNotifier() {
+            @Override
+            public void didRangeBeaconsInRegion(Collection<Beacon> beacons, Region region) {
+
+                if (beacons.isEmpty()) {
+                    // Aggiungi valore di default quando non vengono trovati beacon
+                } else {
+                    for (Beacon beacon : beacons) {
+                        String uuid = beacon.getId1().toString();
+                        int rssi = beacon.getRssi();
+                        double distance = beacon.getDistance();
+
+
+                        uuidToRssiMap.put(uuid, rssi);
+                        uuidToDistanceMap.put(uuid, distance);
+
+                        DecimalFormat df = new DecimalFormat("#.##");
+                        String formattedDistance = df.format(distance);
+
+                        String beaconData = "UUID: " + uuid + "\nRSSI: " + rssi + "\nDistance: " + formattedDistance + " meters";
+                    }
+
+                    // Esempio di chiamata a calculateUserPosition utilizzando le mappe
+                    /*
+                    calculateUserPosition(uuidToDistanceMap.get("2f234454-cf6d-4a0f-adf2-f4911ba9ffa1"),
+                            uuidToDistanceMap.get("2f234454-cf6d-4a0f-adf2-f4911ba9ffa2"),
+                            uuidToDistanceMap.get("2f234454-cf6d-4a0f-adf2-f4911ba9ffa6"),
+                            uuidToRssiMap.get("2f234454-cf6d-4a0f-adf2-f4911ba9ffa1"),
+                            uuidToRssiMap.get("2f234454-cf6d-4a0f-adf2-f4911ba9ffa2"),
+                            uuidToRssiMap.get("2f234454-cf6d-4a0f-adf2-f4911ba9ffa6")); */
+                    disegnaIndicatore(x1, y1, x2, y2, x3, y3, position[0], position[1],
+                            uuidToDistanceMap.get("2f234454-cf6d-4a0f-adf2-f4911ba9ffa1"),
+                            uuidToDistanceMap.get("2f234454-cf6d-4a0f-adf2-f4911ba9ffa2"),
+                            uuidToDistanceMap.get("2f234454-cf6d-4a0f-adf2-f4911ba9ffa6"));
+                }
+            }
+        });
+
+        try {
+            beaconManager.startRangingBeaconsInRegion(new Region("myRangingUniqueId", null, null, null));
+        } catch (RemoteException e) {
+            e.printStackTrace();
+        }
     }
 
 
@@ -957,7 +1382,14 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                     double y4 = nearestRP.getValue();
                     position[0] = (float) x4;
                     position[1] = (float) y4;
-                    disegnaIndicatore(x1, y1, x2, y2, x3, y3, position[0], position[1]);
+                    try {
+                        disegnaIndicatore(x1, y1, x2, y2, x3, y3, position[0], position[1],
+                                uuidToDistanceMap.get("2f234454-cf6d-4a0f-adf2-f4911ba9ffa1"),
+                                uuidToDistanceMap.get("2f234454-cf6d-4a0f-adf2-f4911ba9ffa2"),
+                                uuidToDistanceMap.get("2f234454-cf6d-4a0f-adf2-f4911ba9ffa6"));
+                    } catch (Exception e) {
+                        //
+                    }
                 } else {
                     //
                 }

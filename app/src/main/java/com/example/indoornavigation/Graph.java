@@ -1,6 +1,7 @@
 package com.example.indoornavigation;
 
 import android.graphics.Bitmap;
+import android.util.Log;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -8,7 +9,9 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 
 /**
@@ -40,7 +43,7 @@ public class Graph {
      * @param y Coordinata y del nodo
      */
     public void addNode(String id, float x, float y, String roomType, String availability, String crowdness) {
-        nodes.put(id, new Node(id, x * mapBitmap.getWidth(), y * mapBitmap.getHeight(), roomType,
+        nodes.put(id, new Node(id, x, y, roomType,
                 availability, crowdness));
     }
 
@@ -73,6 +76,7 @@ public class Graph {
      * @param end Identificativo del nodo di arrivo
      * @return Una lista di nodi che rappresenta il percorso più breve tra i nodi di partenza e arrivo
      */
+
     public List<Node> findShortestPath(String start, String end, String roomType, String available, String crowd) {
 
         Set<String> unvisited = new HashSet<>(nodes.keySet());          // praticamente è il l'heap
@@ -111,9 +115,6 @@ public class Graph {
         return reconstructPath(predecessors, start, end);
     }
 
-
-    /*&& !nodes.get(node).getRoomType().equals(roomType) */
-
     private String findClosestNode(Map<String, Integer> distances, Set<String> unvisited, String roomType, String available, String crowd) {
         String closestNode = null;
         int minDistance = Integer.MAX_VALUE;
@@ -148,6 +149,255 @@ public class Graph {
 
         return path;
     }
+
+    public List<Node> findShortestPath(String start, String end, String roomType, String available, String crowd,
+                                       int numAnts, int numIterations, double evaporationRate,
+                                       double alpha, double beta, double q) {
+
+        // Inizializza i feromoni sugli archi
+        initializePheromones();
+
+        List<Node> shortestPath = new ArrayList<>();
+        double shortestPathLength = Double.POSITIVE_INFINITY;
+
+        for (int iteration = 0; iteration < numIterations; iteration++) {
+            List<List<Node>> antPaths = new ArrayList<>();
+            double[] antPathLengths = new double[numAnts];
+
+            // Costruisci soluzioni delle formiche
+            for (int antIndex = 0; antIndex < numAnts; antIndex++) {
+                List<Node> antPath = constructAntPath(start, end, roomType, available, crowd, alpha, beta);
+                antPaths.add(antPath);
+                antPathLengths[antIndex] = calculatePathLength(antPath);
+            }
+
+            // Trova la migliore soluzione tra le formiche
+            int bestAntIndex = findBestAnt(antPathLengths);
+            if (antPathLengths[bestAntIndex] < shortestPathLength) {
+                shortestPath = antPaths.get(bestAntIndex);
+                shortestPathLength = antPathLengths[bestAntIndex];
+            }
+
+            // Aggiorna i feromoni sugli archi
+            updatePheromones(antPaths, antPathLengths, q, evaporationRate);
+        }
+
+        return shortestPath;
+    }
+    private void initializePheromones() {
+        for (Node node : nodes.values()) {
+            for (Edge edge : node.getEdges()) {
+                edge.setPheromone(1.0); // Inizialmente tutti i feromoni sono impostati a 0.0
+            }
+        }
+    }
+
+    // Costruisci il percorso di una formica usando regole di scelta basate su feromoni
+    private List<Node> constructAntPath(String start, String end, String roomType, String available, String crowd,
+                                        double alpha, double beta) {
+        List<Node> antPath = new ArrayList<>();
+        Node current = getNode(start);
+
+        while (!current.getId().equals(end)) {
+            List<Edge> validEdges = current.getEdges().stream()
+                    .filter(edge -> isValidEdge(edge, roomType, available, crowd))
+                    .collect(Collectors.toList());
+
+            double[] probabilities = calculateProbabilities(current, validEdges, alpha, beta);
+            Edge chosenEdge = chooseEdgeWithProbability(validEdges, probabilities);
+
+            antPath.add(current);
+            current = chosenEdge.getDestination();
+        }
+
+        antPath.add(current); // Aggiungi l'ultimo nodo (destinazione)
+        return antPath;
+    }
+
+    // Verifica se un arco è valido per la formica
+    private boolean isValidEdge(Edge edge, String roomType, String available, String crowd) {
+        Node destination = edge.getDestination();
+
+        return !destination.getRoomType().equals(roomType) ||
+                !destination.getAvailability().equals(available) ||
+                !destination.getCrowdness().equals(crowd);
+    }
+
+    // Calcola le probabilità di scelta degli archi basate su feromoni ed euristica migliorata
+    private double[] calculateProbabilities(Node current, List<Edge> edges, double alpha, double beta) {
+        double total = 0;
+        double[] probabilities = new double[edges.size()];
+
+        for (int i = 0; i < edges.size(); i++) {
+            Edge edge = edges.get(i);
+            double pheromone = edge.getPheromone();
+            double heuristic = 1.0 / (edge.getWeight() * edge.getWeight()); // Euristica migliorata
+
+            probabilities[i] = Math.pow(pheromone, alpha) * Math.pow(heuristic, beta);
+            total += probabilities[i];
+        }
+
+        // Normalizza le probabilità
+        for (int i = 0; i < probabilities.length; i++) {
+            probabilities[i] /= total;
+        }
+
+        return probabilities;
+    }
+
+
+    // Scegli un arco in base alle probabilità calcolate
+    private Edge chooseEdgeWithProbability(List<Edge> edges, double[] probabilities) {
+        double randomValue = Math.random();
+        double cumulativeProbability = 0;
+
+        for (int i = 0; i < edges.size(); i++) {
+            cumulativeProbability += probabilities[i];
+            if (randomValue <= cumulativeProbability) {
+                return edges.get(i);
+            }
+        }
+
+        // Se per qualche motivo non è stata scelta alcuna
+        return edges.get(edges.size() - 1);
+    }
+
+    // Aggiorna i feromoni sugli archi in base ai risultati delle formiche
+    private void updatePheromones(List<List<Node>> antPaths, double[] antPathLengths,
+                                  double q, double evaporationRate) {
+        for (Node node : nodes.values()) {
+            for (Edge edge : node.getEdges()) {
+                double deltaPheromone = 0;
+
+                for (int antIndex = 0; antIndex < antPaths.size(); antIndex++) {
+                    List<Node> antPath = antPaths.get(antIndex);
+                    if (antPath.contains(node) && antPath.contains(edge.getDestination())) {
+                        deltaPheromone += q / antPathLengths[antIndex];
+                    }
+                }
+
+                edge.setPheromone((1 - evaporationRate) * edge.getPheromone() + deltaPheromone);
+            }
+        }
+    }
+
+    // Trova l'indice della migliore soluzione tra le formiche
+    private int findBestAnt(double[] antPathLengths) {
+        int bestAntIndex = 0;
+        double shortestPathLength = antPathLengths[0];
+
+        for (int antIndex = 1; antIndex < antPathLengths.length; antIndex++) {
+            if (antPathLengths[antIndex] < shortestPathLength) {
+                shortestPathLength = antPathLengths[antIndex];
+                bestAntIndex = antIndex;
+            }
+        }
+
+        return bestAntIndex;
+    }
+
+
+    // Calcola la lunghezza totale del percorso
+    private double calculatePathLength(List<Node> path) {
+        double length = 0;
+
+        for (int i = 0; i < path.size() - 1; i++) {
+            Node current = path.get(i);
+            Node next = path.get(i + 1);
+
+            for (Edge edge : current.getEdges()) {
+                if (edge.getDestination().equals(next)) {
+                    length += edge.getWeight();
+                    break;
+                }
+            }
+        }
+
+        return length;
+    }
+
+    //A STAR
+    public List<Node> findShortestPathAStar(String start, String end, String roomType, String available, String crowd) {
+        Set<String> openSet = new HashSet<>();
+        Set<String> closedSet = new HashSet<>();
+        Map<String, String> cameFrom = new HashMap<>();
+        Map<String, Double> gScore = new HashMap<>();
+        Map<String, Double> fScore = new HashMap<>();
+
+        openSet.add(start);
+        gScore.put(start, 0.0);
+        fScore.put(start, calculateHeuristic(start, end));
+
+        while (!openSet.isEmpty()) {
+            String current = findLowestFScoreNode(openSet, fScore);
+
+            if (current.equals(end)) {
+                return reconstructPath(cameFrom, current);
+            }
+
+            openSet.remove(current);
+            closedSet.add(current);
+
+            for (Edge edge : nodes.get(current).getEdges()) {
+                String neighborId = edge.getDestination().getId();
+
+                if (closedSet.contains(neighborId)) {
+                    continue;
+                }
+
+                double tentativeGScore = gScore.get(current) + edge.getWeight();
+
+                if (!openSet.contains(neighborId) || tentativeGScore < gScore.get(neighborId)) {
+                    cameFrom.put(neighborId, current);
+                    gScore.put(neighborId, tentativeGScore);
+                    fScore.put(neighborId, tentativeGScore + calculateHeuristic(neighborId, end));
+
+                    if (!openSet.contains(neighborId)) {
+                        openSet.add(neighborId);
+                    }
+                }
+            }
+        }
+
+        return new ArrayList<>(); // No path found
+    }
+
+    private String findLowestFScoreNode(Set<String> openSet, Map<String, Double> fScore) {
+        String lowestNode = null;
+        double lowestScore = Double.POSITIVE_INFINITY;
+
+        for (String node : openSet) {
+            double score = fScore.getOrDefault(node, Double.POSITIVE_INFINITY);
+            if (score < lowestScore) {
+                lowestScore = score;
+                lowestNode = node;
+            }
+        }
+
+        return lowestNode;
+    }
+
+    private List<Node> reconstructPath(Map<String, String> cameFrom, String current) {
+        LinkedList<Node> path = new LinkedList<>();
+        while (current != null) {
+            path.addFirst(nodes.get(current));
+            current = cameFrom.get(current);
+        }
+        return path;
+    }
+
+    private double calculateHeuristic(String nodeId, String end) {
+        Node currentNode = nodes.get(nodeId);
+        Node endNode = nodes.get(end);
+
+        double xDistance = Math.abs(currentNode.getX() - endNode.getX());
+        double yDistance = Math.abs(currentNode.getY() - endNode.getY());
+
+        return Math.sqrt(xDistance * xDistance + yDistance * yDistance);
+    }
+
+
+
 
     /**
      * Classe interna Node che rappresenta un nodo nel grafo.
@@ -217,10 +467,6 @@ public class Graph {
             return edges;
         }
 
-        public void addRoomTypes(String type) {
-            //
-        }
-
         public String getAvailability() {
             return availability;
         }
@@ -247,9 +493,20 @@ public class Graph {
         private Node destination;
         private int weight;
 
+        private double pheromone;
+
+        public double getPheromone() {
+            return pheromone;
+        }
+
+        public void setPheromone(double pheromone) {
+            this.pheromone = pheromone;
+        }
+
         public Edge(Node destination, int weight) {
             this.destination = destination;
             this.weight = weight;
+            this.pheromone = 0.1;
         }
 
         /**

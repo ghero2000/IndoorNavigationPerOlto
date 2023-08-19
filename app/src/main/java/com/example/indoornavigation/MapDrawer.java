@@ -132,12 +132,21 @@ public class MapDrawer {
         mapCanvas.drawCircle(x,y,40,circlePaint);
     }
 
-    public void drawIndicator(float x4, float y4, boolean b) {
-        Paint circlePaint = new Paint();
-        circlePaint.setColor(Color.BLUE);
-        circlePaint.setStyle(Paint.Style.FILL);
-        circlePaint.setAntiAlias(true);
-        mapCanvas.drawCircle(x4,y4,60, circlePaint);
+    public void drawIndicator(float x4, float y4, boolean b, double radius) {
+        if (b) {
+            Paint circlePaint = new Paint();
+            circlePaint.setColor(Color.BLUE);
+            circlePaint.setStyle(Paint.Style.FILL);
+            circlePaint.setAntiAlias(true);
+            mapCanvas.drawCircle(x4, y4, (float) radius, circlePaint);
+        }
+        else {
+            Paint circlePaint = new Paint();
+            circlePaint.setColor(Color.BLUE);
+            circlePaint.setStyle(Paint.Style.STROKE);
+            circlePaint.setAntiAlias(true);
+            mapCanvas.drawCircle(x4, y4, (float) radius, circlePaint);
+        }
     }
 }
 
