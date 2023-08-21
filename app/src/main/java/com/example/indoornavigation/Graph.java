@@ -12,6 +12,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 
 
@@ -151,6 +155,7 @@ public class Graph {
         return path;
     }
 
+    /*
     public List<Node> findShortestPath(String start, String end, String roomType, String available, String crowd,
                                        int numAnts, int numIterations, double evaporationRate,
                                        double alpha, double beta, double q) {
@@ -315,7 +320,7 @@ public class Graph {
         }
 
         return length;
-    }
+    } */
 
     //A STAR
     public List<Node> findShortestPathAStar(String start, String end, String roomType, String available, String crowd) {
@@ -419,7 +424,6 @@ public class Graph {
         return xDistance + yDistance + penalty;
     }
 
-
     /**
      * Classe interna Node che rappresenta un nodo nel grafo.
      * Contiene un identificativo, le coordinate x e y, e una lista di archi adiacenti.
@@ -439,11 +443,13 @@ public class Graph {
             this.y = y;
             this.availability = availability;
             this.crowdness = crowdness;
-            if(roomType == "classroom" || roomType == "elevator" || roomType == "stairs" || roomType ==  "atrium" || roomType == "bathroom" || roomType == "hallway"){
+            this.roomType = roomType;
+            /*if(roomType == "atrium" || roomType == "elevator" || roomType == "stairs" || roomType == "classroom" || roomType == "bathroom" || roomType == "hallway"){
                 this.roomType = roomType;
             }else{
+                Log.d("mlgione", roomType+"");
                 throw new IllegalArgumentException("Invalid room type");
-            }
+            }*/
             edges = new ArrayList<>();
         }
 

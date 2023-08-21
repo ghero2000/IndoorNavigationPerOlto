@@ -20,6 +20,7 @@ import android.hardware.SensorManager;
 import android.net.wifi.ScanResult;
 import android.net.wifi.WifiManager;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.Handler;
 import android.os.RemoteException;
 import android.util.Log;
@@ -52,7 +53,15 @@ import org.altbeacon.beacon.BeaconManager;
 import org.altbeacon.beacon.BeaconParser;
 import org.altbeacon.beacon.RangeNotifier;
 import org.altbeacon.beacon.Region;
+import org.json.JSONException;
+import org.json.JSONObject;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.text.DecimalFormat;
 import java.util.AbstractMap;
 import java.util.ArrayDeque;
@@ -60,6 +69,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Deque;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -80,6 +90,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     
     private TextView txt_dij, txt_aStar;
     private BeaconManager beaconManager;
+    private Graph graphBackup = null;
     private int rssi1 = -1;
     private int rssi2 = -1;
     private int rssi3 = -1;
@@ -198,6 +209,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private double y1 = 2450, y2 = 1810, y3 = 3180, y5 = 2599, y6 = 2930;
     private Handler handler;
     private int numSteps;
+    private boolean safe;
 
     /**
      * Metodo onCreate per la creazione dell'activity.
@@ -256,6 +268,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         //float[] touchPoint = new float[2];
 
         graph = new Graph(mapBitmap);
+        graphBackup = new Graph(mapBitmap);
         path = null;
 
         /*
@@ -451,24 +464,27 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
         graph.addNode("9", (float) 2591.0156 / 3520, (float) 1913.4905 / 4186, "atrium", "available", "notCrow"); */
 
-        // Lista per salvare le coordinate dei punti bianchi
+
+        /*
+        // Lista per salvare le coordinate dei punti neri
         List<Coordinate> blackPoints = new ArrayList<>();
 
-        // Scansione dell'area rettangolare e salvataggio delle coordinate dei punti bianchi
-        for (int y = 480; y < 3280; y=y+15) {
-            for (int x = 815; x < 2875; x=x+15) {
+        // Scansione dell'area rettangolare e salvataggio delle coordinate dei punti neri
+        for (int y = 480; y < 3280; y=y+10) {
+            for (int x = 815; x < 2875; x=x+10) {
                 int pixelColor = mapBitmap.getPixel(x, y);
                 int red = Color.red(pixelColor);
                 int green = Color.green(pixelColor);
                 int blue = Color.blue(pixelColor);
 
-                // Esempio di controllo per determinare se il pixel è bianco o simile
+                // Esempio di controllo per determinare se il pixel è nero o simile
                 if (red <= 200 && green <= 200 && blue <= 200) {
                     blackPoints.add(new Coordinate(x, y));
                 }
             }
-        }
+        } */
 
+        /*
         // Scansione dell'area rettangolare e salvataggio delle coordinate dei punti bianchi
         for (int y = 480; y < 3280; y += 10) {
             for (int x = 815; x < 2875; x += 10) {
@@ -495,11 +511,48 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                     if (!isNearBlackPoint) {
                         whitePoints.add(new Coordinate(x, y));
                         graph.addNode(x + "-" + y, x, y, "atrium", "available", "notCrow");
+                        graphBackup.addNode(x + "-" + y, x, y, "atrium", "available", "notCrow");
+                        // Creazione del JSON per il nodo corrente
                     }
                 }
             }
-        }
+        } */
 
+        try {
+            // Ottieni il contenuto del file JSON dalla cartella "assets"
+            InputStream inputStream = getAssets().open("nodes.json");
+            int size = inputStream.available();
+            byte[] buffer = new byte[size];
+            inputStream.read(buffer);
+            inputStream.close();
+
+            // Converti il contenuto in una stringa JSON
+            String json = new String(buffer, "UTF-8");
+
+            // Parse del JSON
+            JSONObject jsonObject = new JSONObject(json);
+
+            // Ciclo attraverso gli oggetti nel JSON e aggiungi i nodi al grafo
+            Iterator<String> keys = jsonObject.keys();
+            while (keys.hasNext()) {
+                String key = keys.next();
+                JSONObject nodeJson = jsonObject.getJSONObject(key);
+
+                int x = nodeJson.getInt("x");
+                int y = nodeJson.getInt("y");
+                String roomType = nodeJson.getString("roomType");
+                String availability = nodeJson.getString("availability");
+                String crowdness = nodeJson.getString("crowdness");
+
+                // Aggiungi il nodo al grafo
+                whitePoints.add(new Coordinate(x, y));
+                graph.addNode(key, x, y, roomType, availability, crowdness);
+                graphBackup.addNode(key, x, y, roomType, availability, crowdness);
+            }
+        } catch (IOException | JSONException e) {
+            Toast.makeText(this, "ciauzomega", Toast.LENGTH_SHORT).show();
+            e.printStackTrace();
+        }
 
         for (Coordinate coord : whitePoints) {
             int x = coord.x;
@@ -507,7 +560,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             String nodeId = x + "-" + y;
 
             for (int dy = -10; dy <= 10; dy += 10) {
-                for (int dx = -10; dx <= 1; dx += 10) {
+                for (int dx = -10; dx <= 10; dx += 10) {
                     if (dx == 0 && dy == 0) {
                         continue;  // Salta il nodo stesso
                     }
@@ -515,6 +568,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                     int adjacentX = x + dx;
                     int adjacentY = y + dy;
                     String adjacentNodeId = adjacentX + "-" + adjacentY;
+                    //Log.d("cieck", ""+adjacentNodeId);
 
                     String startNodeId = x + "-" + y;
 
@@ -522,13 +576,100 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                     if (graph.getNode(startNodeId) != null && graph.getNode(adjacentNodeId) != null) {
                         // Aggiungi l'arco tra i nodi
                         graph.addEdge(startNodeId, adjacentNodeId, 1);
+                        //Toast.makeText(MainActivity.this, ""+startNodeId+"-"+adjacentNodeId, Toast.LENGTH_SHORT).show();
+                        graphBackup.addEdge(startNodeId, adjacentNodeId, 1);
+                        safe = true;
+                        //Log.d("procopio", ""+adjacentNodeId);
+                    }
+                    else {
+                        Log.d("procopio", "ciao");
                     }
                 }
             }
         }
 
+        /*
+        // Ottieni un'istanza del database
+        JSONObject jsonz = new JSONObject();
+
+        // Scrittura dei dati JSON
+        for (Coordinate coord : whitePoints) {
+            String nodeId = coord.x + "-" + coord.y;
+            JSONObject jsonNode = new JSONObject();
+            try {
+                jsonNode.put("x", coord.x);
+                jsonNode.put("y", coord.y);
+                jsonNode.put("roomType", "atrium");
+                jsonNode.put("availability", "available");
+                jsonNode.put("crowdness", "notCrow");
+
+                // Scrivi i dati nel database utilizzando il nodeId come chiave
+                jsonz.put(nodeId, jsonNode);
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+        } */
+
+        /*
+        // Ottieni un'istanza del database
+        DatabaseReference databaseReference = FirebaseDatabase.getInstance().getReference("nodes");
+
+        // Scrittura dei dati JSON
+        for (Coordinate coord : whitePoints) {
+            String nodeId = coord.x + "-" + coord.y;
+            JSONObject jsonNode = new JSONObject();
+            try {
+                jsonNode.put("x", coord.x);
+                jsonNode.put("y", coord.y);
+                jsonNode.put("roomType", "atrium");
+                jsonNode.put("availability", "available");
+                jsonNode.put("crowdness", "notCrow");
+
+                // Scrivi i dati nel database utilizzando il nodeId come chiave
+                databaseReference.child(nodeId).setValue(jsonNode.toString());
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+        } */
 
 
+        /*
+        DatabaseReference databaseReference = FirebaseDatabase.getInstance().getReference("nodes");
+
+        // Aggiungi un listener per leggere i dati
+        databaseReference.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
+                for (DataSnapshot nodeSnapshot : dataSnapshot.getChildren()) {
+                    String nodeId = nodeSnapshot.getKey();
+                    String jsonNodeString = nodeSnapshot.getValue(String.class);
+
+                    // Esegui il parsing del JSON e aggiungi il nodo al grafo
+                    try {
+                        JSONObject jsonNode = new JSONObject(jsonNodeString);
+                        int x = jsonNode.getInt("x");
+                        int y = jsonNode.getInt("y");
+                        String roomType = jsonNode.getString("roomType");
+                        String availability = jsonNode.getString("availability");
+                        String crowdness = jsonNode.getString("crowdness");
+
+                        // Aggiungi il nodo al grafo
+                        whitePoints.add(new Coordinate(x, y));
+                        graph.addNode(nodeId, x, y, roomType, availability, crowdness);
+                        graphBackup.addNode(nodeId, x, y, roomType, availability, crowdness);
+
+                        // Aggiungi eventuali archi o altre operazioni desiderate
+                    } catch (JSONException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError databaseError) {
+                // Gestisci l'errore
+            }
+        }); */
 
         /*graph.addEdge("1", "7", 1);    ////////////////////////////////////////// cancellare
         graph.addEdge("7", "6", 1);    ////////////////////////////////////////// cancellare
@@ -601,7 +742,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             @Override
             public void onClick(View view) {
                 clearPath();
-                //path = graph.findShortestPath(startPoint.getText().toString(), endPoint.getText().toString(), stairs, available, crowd, 10, 100, 0.1, 1.0, 2.0, 100.0);
+                //path = graph.findShortestPathACO(startPoint.getText().toString(), endPoint.getText().toString(), stairs, available, crowd, 10, 100, 0.1, 1.0, 2.0, 100.0);
                 double startTime = System.currentTimeMillis();
                 //path = graph.findShortestPath(startPoint.getText().toString(), endPoint.getText().toString(), stairs, available, crowd);
                 //Toast.makeText(MainActivity.this, ""+path.size(), Toast.LENGTH_SHORT).show();
@@ -611,6 +752,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 startTime = System.currentTimeMillis();
                 try {
                     path = graph.findShortestPathAStar(startPoint.getText().toString(), endPoint.getText().toString(), stairs, available, crowd);
+                    //path = graph.findShortestPathACO(startPoint.getText().toString(), endPoint.getText().toString(), stairs, available, crowd, 10, 100);
                     //Toast.makeText(MainActivity.this, ""+graph.getNode("1085-2710").getCrowdness(), Toast.LENGTH_SHORT).show();
                 } catch (Exception e) {
                     //
@@ -632,7 +774,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                     path = null;
                 }
                 if (path != null) {
-                    disegnaPercorso(path);
+                    disegnaIndicatore(whitePoints, path);
                     showpath = true;
                     steppy = 0;
                 }
@@ -719,8 +861,13 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                     long y = dataSnapshot.child("y").getValue(Long.class);
 
                     // Ora hai i valori x e y, puoi procedere con il disegno.
-                    disegnaIndicatore(x, y, 110, true, whitePoints, path);
                     updateCrowdedness(x, y, 110);
+                    if(startPoint.getText().toString() != null &&
+                            endPoint.getText().toString() != null && path != null){
+                        path = graph.findShortestPathAStar(startPoint.getText().toString(),
+                                endPoint.getText().toString(), stairs, available, crowd);
+                    }
+                    disegnaIndicatore(x, y, 110, true, whitePoints, path);
                 }
             }
 
@@ -733,20 +880,27 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     }
 
     private void updateCrowdedness(long x, long y, int radius) {
+
         for (Coordinate coord : whitePoints) {
             int dx = Math.abs((int) x - coord.x);
             int dy = Math.abs((int) y - coord.y);
 
+            graph.getNode(coord.x+"-"+coord.y).setCrowdness(graphBackup.getNode(coord.x+"-"+coord.y).getCrowdness());
+
             if (dx * dx + dy * dy <= radius * radius) {
                 // Nodo all'interno del raggio
-                graph.getNode(coord.x+"-"+coord.y).setCrowdness("crowded");
+                try {
+                    graph.getNode(coord.x + "-" + coord.y).setCrowdness("crowded");
+                } catch (Exception e) {
+
+                }
             }
         }
     }
 
     private void disegnaTutto(List<Coordinate> whitePoints) {
         for (Coordinate point : whitePoints) {
-            indicatorDrawer.drawIndicator(point.x, point.y, true, 5);
+            mapDrawer.drawIndicator(point.x, point.y, true, 5);
         }
         /*
         indicatorDrawer.drawIndicator(1013f, 2745f, true, 20);
@@ -835,13 +989,34 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         photoMatrix.getValues(matrixValues);
         float currentScale = matrixValues[Matrix.MSCALE_X];
         PointF currentTranslate = new PointF(matrixValues[Matrix.MTRANS_X], matrixValues[Matrix.MTRANS_Y]);
-        clearPath(indicatorImage);
-        TouchTransformer transformer = new TouchTransformer();
-        disegnaTutto(whitePoints);
-        indicatorDrawer.drawIndicator(x, y, i, true);
+        disegnaPercorso(path);
+        clearPath();
+        showpath = true;
+        steppy = 0;
+        mapDrawer.drawIndicator(x, y, i, true);
         mapDrawer.drawPath(nodes, mapImage, true);
+        //disegnaTutto(whitePoints);
         mapImage.invalidate();
-        indicatorImage.invalidate();
+        Matrix newMatrix = new Matrix();
+        newMatrix.setScale(currentScale, currentScale);
+        newMatrix.postTranslate(currentTranslate.x, currentTranslate.y);
+        indicatorImage.setDisplayMatrix(newMatrix);
+    }
+
+    private void disegnaIndicatore(List<Coordinate> whitePoints, List<Graph.Node> nodes) {
+        Matrix photoMatrix = new Matrix();
+        indicatorImage.getSuppMatrix(photoMatrix);
+        float[] matrixValues = new float[9];
+        photoMatrix.getValues(matrixValues);
+        float currentScale = matrixValues[Matrix.MSCALE_X];
+        PointF currentTranslate = new PointF(matrixValues[Matrix.MTRANS_X], matrixValues[Matrix.MTRANS_Y]);
+        disegnaPercorso(path);
+        clearPath();
+        showpath = true;
+        steppy = 0;
+        mapDrawer.drawPath(nodes, mapImage, true);
+        //disegnaTutto(whitePoints);
+        mapImage.invalidate();
         Matrix newMatrix = new Matrix();
         newMatrix.setScale(currentScale, currentScale);
         newMatrix.postTranslate(currentTranslate.x, currentTranslate.y);
