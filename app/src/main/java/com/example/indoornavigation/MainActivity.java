@@ -58,10 +58,8 @@ import org.json.JSONObject;
 
 import java.io.File;
 import java.io.FileOutputStream;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.text.DecimalFormat;
 import java.util.AbstractMap;
 import java.util.ArrayDeque;
@@ -85,8 +83,14 @@ import java.util.Map;
 public class MainActivity extends AppCompatActivity implements SensorEventListener, StepListener, BeaconConsumer {
     private int stepCount = 0;
 
+    private boolean loadingDismiss = true;
+
+    private Dialog loadingDialog;
+
     // Lista per salvare le coordinate dei punti bianchi
     List<Coordinate> whitePoints = new ArrayList<>();
+
+    List<Coordinate> unavailablePoints = new ArrayList<>();
     
     private TextView txt_dij, txt_aStar;
     private BeaconManager beaconManager;
@@ -465,7 +469,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         graph.addNode("9", (float) 2591.0156 / 3520, (float) 1913.4905 / 4186, "atrium", "available", "notCrow"); */
 
 
-        /*
+    /*
         // Lista per salvare le coordinate dei punti neri
         List<Coordinate> blackPoints = new ArrayList<>();
 
@@ -482,9 +486,9 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                     blackPoints.add(new Coordinate(x, y));
                 }
             }
-        } */
+        }
 
-        /*
+
         // Scansione dell'area rettangolare e salvataggio delle coordinate dei punti bianchi
         for (int y = 480; y < 3280; y += 10) {
             for (int x = 815; x < 2875; x += 10) {
@@ -502,7 +506,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                         int dx = Math.abs(x - blackPoint.x);
                         int dy = Math.abs(y - blackPoint.y);
 
-                        if (dx <= 35 && dy <= 35) {
+                        if (dx <= 20 && dy <= 20) {
                             isNearBlackPoint = true;
                             break;  // Esci dal ciclo una volta trovato un punto nero vicino
                         }
@@ -518,6 +522,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             }
         } */
 
+        /*
         try {
             // Ottieni il contenuto del file JSON dalla cartella "assets"
             InputStream inputStream = getAssets().open("nodes.json");
@@ -551,6 +556,42 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             }
         } catch (IOException | JSONException e) {
             Toast.makeText(this, "ciauzomega", Toast.LENGTH_SHORT).show();
+            e.printStackTrace();
+        } */
+
+
+        try {
+            // Ottieni il contenuto del file JSON dalla cartella "assets"
+            InputStream inputStream = getAssets().open("nodi.json");
+            int size = inputStream.available();
+            byte[] buffer = new byte[size];
+            inputStream.read(buffer);
+            inputStream.close();
+
+            // Converti il contenuto in una stringa JSON
+            String json = new String(buffer, "UTF-8");
+
+            // Parse del JSON
+            JSONObject jsonObject = new JSONObject(json);
+
+            // Ciclo attraverso gli oggetti nel JSON e aggiungi i nodi al grafo
+            Iterator<String> keys = jsonObject.keys();
+            while (keys.hasNext()) {
+                String key = keys.next();
+                JSONObject nodeJson = jsonObject.getJSONObject(key);
+
+                int x = nodeJson.getInt("x");
+                int y = nodeJson.getInt("y");
+                String roomType = nodeJson.getString("roomType");
+                String availability = nodeJson.getString("availability");
+                String crowdness = nodeJson.getString("crowdness");
+
+                // Aggiungi il nodo al grafo
+                whitePoints.add(new Coordinate(x,y));
+                graph.addNode(key, x, y, roomType, availability, crowdness);
+                graphBackup.addNode(key, x, y, roomType, availability, crowdness);
+            }
+        } catch (IOException | JSONException e) {
             e.printStackTrace();
         }
 
@@ -608,6 +649,25 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             } catch (JSONException e) {
                 e.printStackTrace();
             }
+        }
+
+
+        try {
+            // Definisci il percorso completo della cartella di destinazione
+            File destinationFolder = new File(Environment.getExternalStorageDirectory(), "Download");
+            if (!destinationFolder.exists()) {
+                destinationFolder.mkdirs();
+            }
+
+            // Crea il percorso completo per il file desiderato
+            File outputFile = new File(destinationFolder, "nodi.json");
+
+            // Scrivi i dati nel file
+            FileOutputStream outputStream = new FileOutputStream(outputFile);
+            outputStream.write(jsonz.toString().getBytes());
+            outputStream.close();
+        } catch (IOException e) {
+            e.printStackTrace();
         } */
 
         /*
@@ -836,7 +896,10 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             public void run() {
                 while (!Thread.currentThread().isInterrupted()) {
                     checkCrowd(whitePoints);
-
+                    if (!loadingDismiss) {
+                        loadingDismiss = true;
+                        loadingDialog.dismiss();
+                    }
                     try {
                         Thread.sleep(6000); // Attendi 3 secondi
                     } catch (InterruptedException e) {
@@ -868,6 +931,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                                 endPoint.getText().toString(), stairs, available, crowd);
                     }
                     disegnaIndicatore(x, y, 110, true, whitePoints, path);
+                    disegnaTutto(whitePoints);
                 }
             }
 
@@ -898,9 +962,33 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         }
     }
 
+    private void updateAvailability(long x, long y, int radius, boolean b) {
+
+        for (Coordinate coord : whitePoints) {
+            int dx = Math.abs((int) x - coord.x);
+            int dy = Math.abs((int) y - coord.y);
+
+            //graph.getNode(coord.x+"-"+coord.y).setAvailability(graphBackup.getNode(coord.x+"-"+coord.y).getAvailability());
+
+            if (dx * dx + dy * dy <= radius * radius) {
+                // Nodo all'interno del raggio
+                try {
+                    if (b)
+                        graph.getNode(coord.x + "-" + coord.y).setAvailability("available");
+                    else
+                        graph.getNode(coord.x + "-" + coord.y).setAvailability("unavailable");
+                } catch (Exception e) {
+
+                }
+            }
+        }
+    }
+
     private void disegnaTutto(List<Coordinate> whitePoints) {
         for (Coordinate point : whitePoints) {
-            mapDrawer.drawIndicator(point.x, point.y, true, 5);
+            if (graph.getNode(point.x+"-"+ point.y).getAvailability().equals("unavailable")) {
+                mapDrawer.drawIndicator(point.x, point.y, true, 5);
+            }
         }
         /*
         indicatorDrawer.drawIndicator(1013f, 2745f, true, 20);
@@ -993,7 +1081,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         clearPath();
         showpath = true;
         steppy = 0;
-        mapDrawer.drawIndicator(x, y, i, true);
+        mapDrawer.drawIndicator(x, y, i, b);
         mapDrawer.drawPath(nodes, mapImage, true);
         //disegnaTutto(whitePoints);
         mapImage.invalidate();
@@ -1061,7 +1149,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 if (stairs == "stairs") {
                     aSwitch.setChecked(true);
                 } else aSwitch.setChecked(false);
-                if (available == "available") {
+                if (available == "unavailable") {
                     bSwitch.setChecked(true);
                 } else bSwitch.setChecked(false);
                 if (crowd == "crowded") {
@@ -1175,25 +1263,54 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                             dialog.dismiss();
                         }
                     });
-                    if (node.getAvailability() == "available") {
+                    if (node.getAvailability().equals("available")) {
                         sw_available.setChecked(true);
                     }
-                    if (node.getAvailability() == "unavailable") {
+                    if (node.getAvailability().equals("unavailable")) {
                         sw_available.setChecked(false);
                     }
-                    if (node.getCrowdness() == "crowded") {
+                    if (node.getAvailability().equals("crowded")) {
                         sw_crowded.setChecked(true);
                     }
-                    if (node.getCrowdness() == "notCrow") {
+                    if (node.getAvailability().equals("notCrow")) {
                         sw_crowded.setChecked(false);
                     }
                     sw_available.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
                         @Override
                         public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
                             if (sw_available.isChecked()) {
-                                node.setAvailability("available");
-                            } else
+                                dialog.dismiss();
+                                loadingDialog = new Dialog(MainActivity.this);
+                                loadingDialog.setContentView(R.layout.loading_dialog);
+                                TextView loadType = loadingDialog.findViewById(R.id.txt_loading);
+                                loadType.setText("Rimuovendo L'Ostacolo");
+                                loadingDialog.show();
+                                for (Coordinate coord: unavailablePoints) {
+                                    if(Math.abs(coord.x - node.getX()) < 220 && Math.abs(coord.y - node.getY()) < 220) {
+                                        unavailablePoints.remove(coord);
+                                        updateAvailability(coord.x, coord.y, 110, true);
+                                        loadingDismiss = false;
+                                        break;
+                                    }
+                                }
+                            } else {
                                 node.setAvailability("unavailable");
+                                dialog.dismiss();
+                                loadingDialog = new Dialog(MainActivity.this);
+                                loadingDialog.setContentView(R.layout.loading_dialog);
+                                loadingDialog.setContentView(R.layout.loading_dialog);
+                                TextView loadType = loadingDialog.findViewById(R.id.txt_loading);
+                                loadType.setText("Aggiungendo L'Ostacolo");
+                                loadingDialog.show();
+                                updateAvailability((long) node.getX(), (long) node.getY(), 110, false);
+                                unavailablePoints.add(new Coordinate((int) node.getX(), (int) node.getY()));
+                                if(startPoint.getText().toString() != null &&
+                                        endPoint.getText().toString() != null && path != null){
+                                    path = graph.findShortestPathAStar(startPoint.getText().toString(),
+                                            endPoint.getText().toString(), stairs, available, crowd);
+                                }
+                                loadingDismiss = false;
+                            }
                         }
                     });
 

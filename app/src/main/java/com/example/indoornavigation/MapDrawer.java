@@ -135,7 +135,7 @@ public class MapDrawer {
     public void drawIndicator(float x4, float y4, boolean b, double radius) {
         if (b) {
             Paint circlePaint = new Paint();
-            circlePaint.setColor(Color.BLUE);
+            circlePaint.setColor(Color.RED);
             circlePaint.setStyle(Paint.Style.FILL);
             circlePaint.setAlpha(90);
             circlePaint.setAntiAlias(true);
@@ -152,7 +152,10 @@ public class MapDrawer {
 
     public void drawIndicator(long x, long y, int i, boolean b1) {
         Paint paint = new Paint();
-        paint.setColor(Color.YELLOW);
+        if (b1)
+            paint.setColor(Color.YELLOW);
+        else
+            paint.setColor(Color.RED);
         paint.setStyle(Paint.Style.FILL);
         paint.setAlpha(128);
         //paint.setAlpha(128); // Imposta l'opacità trasparente.
