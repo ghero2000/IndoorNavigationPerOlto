@@ -514,7 +514,7 @@ public class Graph {
         }
 
         public void setFixed(boolean b) {
-            this.fixed = true;
+            this.fixed = b;
         }
 
         public boolean isFixed() {

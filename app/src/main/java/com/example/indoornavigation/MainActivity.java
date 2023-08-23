@@ -831,6 +831,11 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                     path = null;
                 }
                 if (path != null) {
+                    loadingDialog = new Dialog(MainActivity.this);
+                    loadingDialog.setContentView(R.layout.loading_dialog);
+                    TextView loadType = loadingDialog.findViewById(R.id.txt_loading);
+                    loadType.setText("Calcolo Del Percorso...");
+                    loadingDialog.show();
                     checkCrowd(whitePoints);
                 }
             }
@@ -936,6 +941,11 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                             disegnaIndicatoreThread(point.x, point.y,110, false, whitePoints, path);
                         }
                     }
+                    try {
+                        loadingDialog.dismiss();
+                    } catch (Exception e) {
+                        // il loading dialog non esiste?
+                    }
                 }
             }
 
@@ -954,6 +964,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             int dy = Math.abs((int) y - coord.y);
 
             graph.getNode(coord.x+"-"+coord.y).setCrowdness(graphBackup.getNode(coord.x+"-"+coord.y).getCrowdness());
+            graph.getNode(coord.x+"-"+coord.y).setFixed(false);
 
             for (Coordinate coordCrowded: crowdedPoints) {
                 graph.getNode(coordCrowded.x+"-"+coordCrowded.y).setCrowdness("crowded");
