@@ -436,6 +436,7 @@ public class Graph {
         private String availability;
         private String crowdness;
         private List<Edge> edges;
+        private boolean fixed;
 
         public Node(String id, float x, float y, String roomType, String availability, String crowdness) {
             this.id = id;
@@ -444,6 +445,8 @@ public class Graph {
             this.availability = availability;
             this.crowdness = crowdness;
             this.roomType = roomType;
+            this.fixed = false;
+
             /*if(roomType == "atrium" || roomType == "elevator" || roomType == "stairs" || roomType == "classroom" || roomType == "bathroom" || roomType == "hallway"){
                 this.roomType = roomType;
             }else{
@@ -508,6 +511,14 @@ public class Graph {
 
         public void setCrowdness(String crowdness) {
             this.crowdness = crowdness;
+        }
+
+        public void setFixed(boolean b) {
+            this.fixed = true;
+        }
+
+        public boolean isFixed() {
+            return fixed;
         }
     }
 

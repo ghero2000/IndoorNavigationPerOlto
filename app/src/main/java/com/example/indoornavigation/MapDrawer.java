@@ -133,7 +133,15 @@ public class MapDrawer {
     }
 
     public void drawIndicator(float x4, float y4, boolean b, double radius) {
-        if (b) {
+        if (b && radius > 5) {
+            Paint circlePaint = new Paint();
+            circlePaint.setColor(Color.YELLOW);
+            circlePaint.setStyle(Paint.Style.FILL_AND_STROKE);
+            circlePaint.setAlpha(90);
+            circlePaint.setAntiAlias(true);
+            mapCanvas.drawCircle(x4, y4, (float) radius, circlePaint);
+        }
+        if (b && radius <=5) {
             Paint circlePaint = new Paint();
             circlePaint.setColor(Color.RED);
             circlePaint.setStyle(Paint.Style.FILL);
