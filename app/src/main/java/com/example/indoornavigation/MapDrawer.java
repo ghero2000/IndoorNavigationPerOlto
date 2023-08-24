@@ -1,10 +1,13 @@
 package com.example.indoornavigation;
 
+import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Path;
+import android.util.Log;
+import android.widget.Toast;
 
 import com.github.chrisbanes.photoview.PhotoView;
 
@@ -170,6 +173,65 @@ public class MapDrawer {
         float radius = i; // Imposta il raggio del cerchio.
         paint.setAntiAlias(true);
         mapCanvas.drawCircle(x, y, radius, paint);
+    }
+
+    public void drawElevator(int x, int y) {
+        int centerX = x;
+        int centerY = y;
+        int elevatorWidth = 60;
+        int elevatorHeight = 80;
+        //int ladderWidth = 40;
+        int ladderHeight = 80;
+        int stepCount = 3;
+        int stepHeight = ladderHeight / stepCount;
+        int doorWidth = 20;
+        int doorHeight = 80;
+
+        Paint paint = new Paint();
+
+        paint.setColor(Color.BLACK);
+        paint.setStrokeWidth(10);
+
+        // Draw elevator
+        int elevatorY = centerY - stepCount * stepHeight;
+        mapCanvas.drawRect(centerX - elevatorWidth / 2, elevatorY,
+                centerX + elevatorWidth / 2, elevatorY + elevatorHeight, paint);
+
+        paint.setColor(Color.GRAY);
+
+        // Draw elevator doors
+        int doorX1 = centerX - elevatorWidth / 4 - doorWidth / 2;
+        int doorX2 = centerX + elevatorWidth / 4 - doorWidth / 2;
+        mapCanvas.drawRect(doorX1, elevatorY, doorX1 + doorWidth, elevatorY + doorHeight, paint);
+        mapCanvas.drawRect(doorX2, elevatorY, doorX2 + doorWidth, elevatorY + doorHeight, paint);
+    }
+
+    public void drawStair(int x, int y, Context applicationContext) {
+        int centerX = x;
+        int centerY = y;
+        int ladderWidth = 40;
+        int ladderHeight = 80;
+        int stepCount = 3;
+        int stepHeight = ladderHeight / stepCount;
+
+        Paint paint = new Paint();
+        paint.setColor(Color.BLACK);
+        paint.setStrokeWidth(10);
+
+        // Draw ladder sides
+        mapCanvas.drawLine(centerX - ladderWidth / 2, centerY,
+                centerX - ladderWidth / 2, centerY - ladderHeight, paint);
+        mapCanvas.drawLine(centerX + ladderWidth / 2, centerY,
+                centerX + ladderWidth / 2, centerY - ladderHeight, paint);
+
+        //paint.setColor(Color.GRAY);
+
+        // Draw ladder steps
+        for (int i = 0; i < stepCount; i++) {
+            int stepY = centerY - i * stepHeight;
+            mapCanvas.drawLine(centerX - ladderWidth / 2, stepY,
+                    centerX + ladderWidth / 2, stepY, paint);
+        }
     }
 }
 

@@ -332,6 +332,19 @@ public class Graph {
 
         openSet.add(start);
         gScore.put(start, 0.0);
+
+        if (end.equals("A")) {
+            String nearestStaircaseNode = "";
+            // Find the nearest node with roomType "staircase" from the start
+            if(!roomType.equals("stairs")) {
+                nearestStaircaseNode = findNearestStaircaseNode(start);
+            }
+            else {
+                nearestStaircaseNode = findNearestElevatorNode(start);
+            }
+            end = nearestStaircaseNode; // Update end to the nearest staircase node
+        }
+
         fScore.put(start, calculateHeuristic(start, end, roomType, available, crowd));
 
         while (!openSet.isEmpty()) {
@@ -422,6 +435,52 @@ public class Graph {
         }
 
         return xDistance + yDistance + penalty;
+    }
+
+    private String findNearestStaircaseNode(String start) {
+        double shortestDistance = Double.POSITIVE_INFINITY;
+        String nearestStaircaseNode = null;
+
+        for (String nodeId : nodes.keySet()) {
+            Node node = nodes.get(nodeId);
+            if (node.getRoomType().equals("stairs") || node.getRoomType().equals("elevator")) {
+                double distance = calculateDistance(start, nodeId);
+                if (distance < shortestDistance) {
+                    shortestDistance = distance;
+                    nearestStaircaseNode = nodeId;
+                }
+            }
+        }
+
+        return nearestStaircaseNode;
+    }
+
+    private String findNearestElevatorNode(String start) {
+        double shortestDistance = Double.POSITIVE_INFINITY;
+        String nearestStaircaseNode = null;
+
+        for (String nodeId : nodes.keySet()) {
+            Node node = nodes.get(nodeId);
+            if (node.getRoomType().equals("elevator")) {
+                double distance = calculateDistance(start, nodeId);
+                if (distance < shortestDistance) {
+                    shortestDistance = distance;
+                    nearestStaircaseNode = nodeId;
+                }
+            }
+        }
+
+        return nearestStaircaseNode;
+    }
+
+    private double calculateDistance(String node1Id, String node2Id) {
+        Node node1 = nodes.get(node1Id);
+        Node node2 = nodes.get(node2Id);
+
+        double xDistance = Math.abs(node1.getX() - node2.getX());
+        double yDistance = Math.abs(node1.getY() - node2.getY());
+
+        return Math.sqrt(xDistance * xDistance + yDistance * yDistance);
     }
 
     /**

@@ -8,6 +8,7 @@ import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Color;
 import android.graphics.Matrix;
 import android.graphics.PointF;
 import android.graphics.RectF;
@@ -88,10 +89,14 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
     List<Coordinate> unavailablePoints = new ArrayList<>();
     List<Coordinate> crowdedPoints = new ArrayList<>();
+    List<Coordinate> stairPoints = new ArrayList<>();
+    List<Coordinate> elevatorPoints = new ArrayList<>();
 
     private TextView txt_dij, txt_aStar;
+    private ImageView btn_up, btn_down;
+    private boolean floor = false; //false = primo piano, true = secondo
     private BeaconManager beaconManager;
-    private Graph graphBackup = null;
+    private Graph graphBackup1 = null;
     private int rssi1 = -1;
     private int rssi2 = -1;
     private int rssi3 = -1;
@@ -170,7 +175,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
     private String crowd = "";
 
-    private Graph graph;
+    private Graph graph1;
+    private Graph graph2;
 
     private List<Graph.Node> path;
 
@@ -211,6 +217,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private Handler handler;
     private int numSteps;
     private boolean safe;
+    private Graph graphBackup2 = null;
 
     /**
      * Metodo onCreate per la creazione dell'activity.
@@ -226,6 +233,9 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
         txt_dij = findViewById(R.id.txt_dijkstra);
         txt_aStar = findViewById(R.id.txt_astar);
+
+        btn_up = findViewById(R.id.btn_up);
+        btn_down = findViewById(R.id.btn_down);
 
         beaconManager = BeaconManager.getInstanceForApplication(this);
         beaconManager.bind(this);
@@ -268,8 +278,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
         //float[] touchPoint = new float[2];
 
-        graph = new Graph(mapBitmap);
-        graphBackup = new Graph(mapBitmap);
+        graph1 = new Graph(mapBitmap);
+        graphBackup1 = new Graph(mapBitmap);
         path = null;
 
         /*
@@ -585,8 +595,16 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
                 // Aggiungi il nodo al grafo
                 whitePoints.add(new Coordinate(x,y));
-                graph.addNode(key, x, y, roomType, availability, crowdness);
-                graphBackup.addNode(key, x, y, roomType, availability, crowdness);
+                graph1.addNode(key, x, y, roomType, availability, crowdness);
+                if (roomType.equals("stairs")) {
+                    //Toast.makeText(this, "staravia", Toast.LENGTH_SHORT).show();
+                    stairPoints.add(new Coordinate(x, y));
+                }
+                if (roomType.equals("elevator")) {
+                    //Toast.makeText(this, "staravia", Toast.LENGTH_SHORT).show();
+                    elevatorPoints.add(new Coordinate(x, y));
+                }
+                graphBackup1.addNode(key, x, y, roomType, availability, crowdness);
             }
         } catch (IOException | JSONException e) {
             e.printStackTrace();
@@ -611,11 +629,11 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                     String startNodeId = x + "-" + y;
 
                     // Verifica che il nodo associato alle coordinate sia presente nella lista dei nodi
-                    if (graph.getNode(startNodeId) != null && graph.getNode(adjacentNodeId) != null) {
+                    if (graph1.getNode(startNodeId) != null && graph1.getNode(adjacentNodeId) != null) {
                         // Aggiungi l'arco tra i nodi
-                        graph.addEdge(startNodeId, adjacentNodeId, 1);
+                        graph1.addEdge(startNodeId, adjacentNodeId, 1);
                         //Toast.makeText(MainActivity.this, ""+startNodeId+"-"+adjacentNodeId, Toast.LENGTH_SHORT).show();
-                        graphBackup.addEdge(startNodeId, adjacentNodeId, 1);
+                        graphBackup1.addEdge(startNodeId, adjacentNodeId, 1);
                         safe = true;
                         //Log.d("procopio", ""+adjacentNodeId);
                     }
@@ -808,7 +826,11 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 //txt_dij.setText(elapsedTime+"");
                 startTime = System.currentTimeMillis();
                 try {
-                    path = graph.findShortestPathAStar(startPoint.getText().toString(), endPoint.getText().toString(), stairs, available, crowd);
+                    if(floor) {
+                        path = graph2.findShortestPathAStar(startPoint.getText().toString(), endPoint.getText().toString(), stairs, available, crowd);
+                    }
+                    else
+                        path = graph1.findShortestPathAStar(startPoint.getText().toString(), endPoint.getText().toString(), stairs, available, crowd);
                     //path = graph.findShortestPathACO(startPoint.getText().toString(), endPoint.getText().toString(), stairs, available, crowd, 10, 100);
                     //Toast.makeText(MainActivity.this, ""+graph.getNode("1085-2710").getCrowdness(), Toast.LENGTH_SHORT).show();
                 } catch (Exception e) {
@@ -821,9 +843,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 //path = graph.findShortestPath(startPoint.getText().toString(), endPoint.getText().toString(), stairs, available, crowd, 5, 150, 0.1, 10.0, 20.0, 100.0);
                 //Toast.makeText(MainActivity.this, ""+elapsedTime, Toast.LENGTH_SHORT).show();
                 //disegnaTutto(whitePoints);
-                for (Graph.Node node : path) {
-                    Log.d("Node ID", node.getId());
-                }
                 try {
                     path.get(0);
                     path.get(1);
@@ -842,6 +861,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         });
 
         Log.d("Coordinate", "Width: " + String.valueOf(mapBitmap.getWidth()) + "  Height: " + String.valueOf(mapBitmap.getHeight()));
+
 
         indicatorImage.setOnMatrixChangeListener(new OnMatrixChangedListener() {
             @Override
@@ -882,12 +902,226 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         simpleStepDetector.registerListener(this);
         steps[0] = 0;
 
+        btn_up.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if(!floor) {
+                    path = null;
+                    whitePoints.clear();
+                    Toast.makeText(MainActivity.this, ""+whitePoints.size(), Toast.LENGTH_SHORT).show();
+                    map = null;
+                    map = getResources().getDrawable(R.drawable.casa_iubirii2);
+                    mapBitmap = null;
+                    mapBitmap = BitmapFactory.decodeResource(getResources(),
+                            R.drawable.casa_iubirii2);
+                    mapDrawer = new MapDrawer(mapBitmap);
+                    indicatorDrawer = new MapDrawer(indicatorBitmap);
+                    mapImage = null;
+                    mapImage = findViewById(R.id.map_image);
+                    // Puoi reimpostare l'immagine a null per "resettare" il PhotoView
+                    mapImage.setImageResource(0); // Oppure
+                    mapImage.setImageDrawable(null);
+                    mapImage.setImageDrawable(map);
+                    mapImage.setImageBitmap(mapDrawer.getMapBitmap());
+                    mapImage.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
+                    //mapImage.invalidate();
+                    floor = true;
+
+                    if (graph2 == null) {
+                        graph2 = new Graph(mapBitmap);
+                        graphBackup2 = new Graph(mapBitmap);
+                        // Lista per salvare le coordinate dei punti neri
+                        List<Coordinate> blackPoints = new ArrayList<>();
+
+                        // Scansione dell'area rettangolare e salvataggio delle coordinate dei punti neri
+                        for (int y = 480; y < 3280; y = y + 10) {
+                            for (int x = 815; x < 2875; x = x + 10) {
+                                int pixelColor = mapBitmap.getPixel(x, y);
+                                int red = Color.red(pixelColor);
+                                int green = Color.green(pixelColor);
+                                int blue = Color.blue(pixelColor);
+
+                                // Esempio di controllo per determinare se il pixel è nero o simile
+                                if (red <= 200 && green <= 200 && blue <= 200) {
+                                    blackPoints.add(new Coordinate(x, y));
+                                }
+                            }
+                        }
+
+
+                        // Scansione dell'area rettangolare e salvataggio delle coordinate dei punti bianchi
+                        for (int y = 480; y < 3280; y += 10) {
+                            for (int x = 815; x < 2875; x += 10) {
+                                int pixelColor = mapBitmap.getPixel(x, y);
+                                int red = Color.red(pixelColor);
+                                int green = Color.green(pixelColor);
+                                int blue = Color.blue(pixelColor);
+
+                                // Controllo per determinare se il pixel è bianco o simile
+                                if (red > 200 && green > 200 && blue > 200) {
+                                    boolean isNearBlackPoint = false;
+
+                                    // Controlla se il punto bianco è vicino a un punto nero
+                                    for (Coordinate blackPoint : blackPoints) {
+                                        int dx = Math.abs(x - blackPoint.x);
+                                        int dy = Math.abs(y - blackPoint.y);
+
+                                        if (dx <= 20 && dy <= 20) {
+                                            isNearBlackPoint = true;
+                                            break;  // Esci dal ciclo una volta trovato un punto nero vicino
+                                        }
+                                    }
+
+                                    if (!isNearBlackPoint) {
+                                        whitePoints.add(new Coordinate(x, y));
+                                        graph2.addNode("A"+x + "-" + y, x, y, "atrium", "available", "notCrow");
+                                        graphBackup2.addNode("A"+x + "-" + y, x, y, "atrium", "available", "notCrow");
+                                    }
+                                }
+                            }
+                        }
+                        for (Coordinate coord : whitePoints) {
+                            int x = coord.x;
+                            int y = coord.y;
+
+                            for (int dy = -10; dy <= 10; dy += 10) {
+                                for (int dx = -10; dx <= 10; dx += 10) {
+                                    if (dx == 0 && dy == 0) {
+                                        continue;  // Salta il nodo stesso
+                                    }
+
+                                    int adjacentX = x + dx;
+                                    int adjacentY = y + dy;
+                                    String adjacentNodeId = "A"+adjacentX + "-" + adjacentY;
+                                    //Log.d("cieck", ""+adjacentNodeId);
+
+                                    String startNodeId = "A"+x + "-" + y;
+
+                                    // Verifica che il nodo associato alle coordinate sia presente nella lista dei nodi
+                                    if (graph2.getNode(startNodeId) != null && graph2.getNode(adjacentNodeId) != null) {
+                                        // Aggiungi l'arco tra i nodi
+                                        graph2.addEdge(startNodeId, adjacentNodeId, 1);
+                                        //Toast.makeText(MainActivity.this, ""+startNodeId+"-"+adjacentNodeId, Toast.LENGTH_SHORT).show();
+                                        graphBackup2.addEdge(startNodeId, adjacentNodeId, 1);
+                                        safe = true;
+                                        //Log.d("procopio", ""+adjacentNodeId);
+                                    } else {
+                                        Log.d("procopio", "ciao");
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        btn_down.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (floor) {
+                    path = null;
+                    whitePoints.clear();
+                    Toast.makeText(MainActivity.this, ""+whitePoints.size(), Toast.LENGTH_SHORT).show();
+                    map = null;
+                    map = getResources().getDrawable(R.drawable.casa_iubirii);
+                    mapBitmap = null;
+                    mapBitmap = BitmapFactory.decodeResource(getResources(),
+                            R.drawable.casa_iubirii);
+                    mapDrawer = new MapDrawer(mapBitmap);
+                    indicatorDrawer = new MapDrawer(indicatorBitmap);
+                    mapImage = null;
+                    mapImage = findViewById(R.id.map_image);
+                    // Puoi reimpostare l'immagine a null per "resettare" il PhotoView
+                    mapImage.setImageResource(0); // Oppure
+                    mapImage.setImageDrawable(null);
+                    mapImage.setImageDrawable(map);
+                    mapImage.setImageBitmap(mapDrawer.getMapBitmap());
+                    mapImage.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
+                    //mapImage.invalidate();
+                    floor = false;
+                    if (graph1 == null) {
+                        try {
+                            // Ottieni il contenuto del file JSON dalla cartella "assets"
+                            InputStream inputStream = getAssets().open("nodi.json");
+                            int size = inputStream.available();
+                            byte[] buffer = new byte[size];
+                            inputStream.read(buffer);
+                            inputStream.close();
+
+                            // Converti il contenuto in una stringa JSON
+                            String json = new String(buffer, "UTF-8");
+
+                            // Parse del JSON
+                            JSONObject jsonObject = new JSONObject(json);
+
+                            // Ciclo attraverso gli oggetti nel JSON e aggiungi i nodi al grafo
+                            Iterator<String> keys = jsonObject.keys();
+                            while (keys.hasNext()) {
+                                String key = keys.next();
+                                JSONObject nodeJson = jsonObject.getJSONObject(key);
+
+                                int x = nodeJson.getInt("x");
+                                int y = nodeJson.getInt("y");
+                                String roomType = nodeJson.getString("roomType");
+                                String availability = nodeJson.getString("availability");
+                                String crowdness = nodeJson.getString("crowdness");
+
+                                // Aggiungi il nodo al grafo
+                                whitePoints.add(new Coordinate(x, y));
+                                graph1.addNode(key, x, y, roomType, availability, crowdness);
+                                graphBackup1.addNode(key, x, y, roomType, availability, crowdness);
+                            }
+                        } catch (IOException | JSONException e) {
+                            e.printStackTrace();
+                        }
+
+                        for (Coordinate coord : whitePoints) {
+                            int x = coord.x;
+                            int y = coord.y;
+                            String nodeId = x + "-" + y;
+
+                            for (int dy = -10; dy <= 10; dy += 10) {
+                                for (int dx = -10; dx <= 10; dx += 10) {
+                                    if (dx == 0 && dy == 0) {
+                                        continue;  // Salta il nodo stesso
+                                    }
+
+                                    int adjacentX = x + dx;
+                                    int adjacentY = y + dy;
+                                    String adjacentNodeId = adjacentX + "-" + adjacentY;
+                                    //Log.d("cieck", ""+adjacentNodeId);
+
+                                    String startNodeId = x + "-" + y;
+
+                                    // Verifica che il nodo associato alle coordinate sia presente nella lista dei nodi
+                                    if (graph1.getNode(startNodeId) != null && graph1.getNode(adjacentNodeId) != null) {
+                                        // Aggiungi l'arco tra i nodi
+                                        graph1.addEdge(startNodeId, adjacentNodeId, 1);
+                                        //Toast.makeText(MainActivity.this, ""+startNodeId+"-"+adjacentNodeId, Toast.LENGTH_SHORT).show();
+                                        graphBackup1.addEdge(startNodeId, adjacentNodeId, 1);
+                                        safe = true;
+                                        //Log.d("procopio", ""+adjacentNodeId);
+                                    } else {
+                                        Log.d("procopio", "ciao");
+                                    }
+                                }
+                            }
+                        }
+                        Toast.makeText(MainActivity.this, "down click", Toast.LENGTH_SHORT).show();
+                    }
+                }
+            }
+        });
+
         checkAndRequestPermissions();
         mainWifi = (WifiManager) getSystemService(Context.WIFI_SERVICE);
         receiverWifi = new WifiReceiver();
         registerReceiver(receiverWifi, new
                 IntentFilter(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION));
-        checkPoint(graph, touchTransformer, indicatorImage, whitePoints);
+        if (floor)
+            checkPoint(graph2, touchTransformer, indicatorImage, whitePoints);
+        else checkPoint(graph1, touchTransformer, indicatorImage, whitePoints);
         handler = new Handler();
         startScanWithInterval();
         // Avvia il thread per eseguire checkCrowd() in background con un loop
@@ -925,22 +1159,69 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
                     // Ora hai i valori x e y, puoi procedere con il disegno.
                     updateCrowdedness(x, y, 110);
+                    /*
                     if(startPoint.getText().toString() != null &&
                             endPoint.getText().toString() != null && path != null){
-                        path = graph.findShortestPathAStar(startPoint.getText().toString(),
-                                endPoint.getText().toString(), stairs, available, crowd);
-                    }
+                        if (floor) {
+                            try {
+                                path = graph2.findShortestPathAStar(startPoint.getText().toString(),
+                                        endPoint.getText().toString(), stairs, available, crowd);
+                            } catch (Exception e) {
+
+                            }
+                        }
+                        else {
+                            try {
+                                path = graph1.findShortestPathAStar(startPoint.getText().toString(),
+                                        endPoint.getText().toString(), stairs, available, crowd);
+                            } catch (Exception e) {
+
+                            }
+                        }
+                    } */
                     clearPath();
                     disegnaIndicatoreThread(x, y, 110, true, whitePoints, path);
                     for (Coordinate point : crowdedPoints) {
-                        if (graph.getNode(point.x+"-"+ point.y).getCrowdness().equals("crowded")) {
-                            disegnaIndicatoreThread(point.x, point.y,110, true, whitePoints, path);
-                        }
-                    }for (Coordinate point : unavailablePoints) {
-                        if (graph.getNode(point.x+"-"+ point.y).getAvailability().equals("unavailable")) {
-                            disegnaIndicatoreThread(point.x, point.y,110, false, whitePoints, path);
+                        String nodeKey = floor ? "A" + point.x + "-" + point.y : point.x + "-" + point.y;
+                        String crowdness = floor ? graph2.getNode(nodeKey).getCrowdness() : graph1.getNode(nodeKey).getCrowdness();
+
+                        if ("crowded".equals(crowdness)) {
+                            disegnaIndicatoreThread(point.x, point.y, 110, true, whitePoints, path);
                         }
                     }
+
+                    for (Coordinate point : unavailablePoints) {
+                        String nodeKey = floor ? "A" + point.x + "-" + point.y : point.x + "-" + point.y;
+                        String availability = floor ? graph2.getNode(nodeKey).getAvailability() : graph1.getNode(nodeKey).getAvailability();
+
+                        if ("unavailable".equals(availability)) {
+                            disegnaIndicatoreThread(point.x, point.y, 110, false, whitePoints, path);
+                        }
+                    }
+
+                    /*for (Coordinate point : crowdedPoints) {
+                        if(floor) {
+                            if (graph2.getNode("A"+point.x + "-" + point.y).getCrowdness().equals("crowded")) {
+                                disegnaIndicatoreThread(point.x, point.y, 110, true, whitePoints, path);
+                            }
+                        }
+                        else {
+                            if (graph1.getNode(point.x + "-" + point.y).getCrowdness().equals("crowded")) {
+                                disegnaIndicatoreThread(point.x, point.y, 110, true, whitePoints, path);
+                            }
+                        }
+                    }for (Coordinate point : unavailablePoints) {
+                        if (floor) {
+                            if (graph2.getNode("A"+point.x + "-" + point.y).getAvailability().equals("unavailable")) {
+                                disegnaIndicatoreThread(point.x, point.y, 110, false, whitePoints, path);
+                            }
+                        }
+                        else {
+                            if (graph1.getNode(point.x + "-" + point.y).getAvailability().equals("unavailable")) {
+                                disegnaIndicatoreThread(point.x, point.y, 110, false, whitePoints, path);
+                            }
+                        }
+                    } */
                     try {
                         loadingDialog.dismiss();
                     } catch (Exception e) {
@@ -957,22 +1238,64 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
     }
 
+    /*
     private void updateCrowdedness(long x, long y, int radius) {
 
         for (Coordinate coord : whitePoints) {
             int dx = Math.abs((int) x - coord.x);
             int dy = Math.abs((int) y - coord.y);
 
-            graph.getNode(coord.x+"-"+coord.y).setCrowdness(graphBackup.getNode(coord.x+"-"+coord.y).getCrowdness());
-            graph.getNode(coord.x+"-"+coord.y).setFixed(false);
+            Graph graph;
+            Graph graphBackup;
+            if(floor) {
+                graph = graph2;
+                graphBackup = graphBackup2;
+            }
+            else {
+                graph = graph1;
+                graphBackup = graphBackup1;
+            }
+
+            try {
+                graph.getNode(coord.x + "-" + coord.y).setCrowdness(graphBackup.getNode(coord.x + "-" + coord.y).getCrowdness());
+                graph.getNode(coord.x + "-" + coord.y).setFixed(false);
+            } catch (Exception e) {
+
+            }
+
+            try {
+                graph.getNode("A"+coord.x + "-" + coord.y).setCrowdness(graphBackup.getNode("A"+coord.x + "-" + coord.y).getCrowdness());
+                graph.getNode("A"+coord.x + "-" + coord.y).setFixed(false);
+            } catch (Exception e) {
+
+            }
 
             for (Coordinate coordCrowded: crowdedPoints) {
-                graph.getNode(coordCrowded.x+"-"+coordCrowded.y).setCrowdness("crowded");
+                try {
+                    graph.getNode(coordCrowded.x + "-" + coordCrowded.y).setCrowdness("crowded");
+                } catch (Exception e) {
+
+                }
+
+                try {
+                    graph.getNode("A"+coordCrowded.x + "-" + coordCrowded.y).setCrowdness("crowded");
+                } catch (Exception e) {
+
+                }
 
                 int dxRadius = Math.abs(coordCrowded.x - coord.x);
                 int dyRadius = Math.abs(coordCrowded.y - coord.y);
                 if (dxRadius * dxRadius + dyRadius * dyRadius <= radius * radius) {
-                    graph.getNode(coord.x + "-" + coord.y).setCrowdness("crowded");
+                    try {
+                        graph.getNode(coord.x + "-" + coord.y).setCrowdness("crowded");
+                    } catch (Exception e) {
+
+                    }
+                    try {
+                        graph.getNode("A"+coord.x + "-" + coord.y).setCrowdness("crowded");
+                    } catch (Exception e) {
+
+                    }
                 }
             }
 
@@ -984,9 +1307,60 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 } catch (Exception e) {
 
                 }
+                try {
+                    graph.getNode("A"+coord.x + "-" + coord.y).setCrowdness("crowded");
+                    graph.getNode("A"+coord.x + "-" + coord.y).setFixed(true);
+                } catch (Exception e) {
+
+                }
+            }
+        }
+    } */
+
+    private void updateCrowdedness(long x, long y, int radius) {
+        for (Coordinate coord : whitePoints) {
+            int dx = Math.abs((int) x - coord.x);
+            int dy = Math.abs((int) y - coord.y);
+
+            Graph graph = floor ? graph2 : graph1;
+            Graph graphBackup = floor ? graphBackup2 : graphBackup1;
+
+            String nodeKey = floor ? "A" + coord.x + "-" + coord.y : coord.x + "-" + coord.y;
+            Graph.Node node = graph.getNode(nodeKey);
+            Graph.Node backupNode = graphBackup.getNode(nodeKey);
+
+            try {
+                node.setCrowdness(backupNode.getCrowdness());
+                node.setFixed(false);
+            } catch (Exception e) {}
+
+            for (Coordinate coordCrowded : crowdedPoints) {
+                String crowdedNodeKey = floor ? "A" + coordCrowded.x + "-" + coordCrowded.y : coordCrowded.x + "-" + coordCrowded.y;
+                Graph.Node crowdedNode = graph.getNode(crowdedNodeKey);
+
+                try {
+                    crowdedNode.setCrowdness("crowded");
+                } catch (Exception e) {}
+
+                int dxRadius = Math.abs(coordCrowded.x - coord.x);
+                int dyRadius = Math.abs(coordCrowded.y - coord.y);
+                if (dxRadius * dxRadius + dyRadius * dyRadius <= radius * radius) {
+                    try {
+                        node.setCrowdness("crowded");
+                    } catch (Exception e) {}
+                }
+            }
+
+            if (dx * dx + dy * dy <= radius * radius) {
+                // Nodo all'interno del raggio
+                try {
+                    node.setCrowdness("crowded");
+                    node.setFixed(true);
+                } catch (Exception e) {}
             }
         }
     }
+
 
     private void updateAvailability(long x, long y, int radius, boolean b) {
 
@@ -999,10 +1373,33 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             if (dx * dx + dy * dy <= radius * radius) {
                 // Nodo all'interno del raggio
                 try {
-                    if (b)
-                        graph.getNode(coord.x + "-" + coord.y).setAvailability("available");
-                    else
-                        graph.getNode(coord.x + "-" + coord.y).setAvailability("unavailable");
+                    Graph graph;
+                    if(floor) graph = graph2;
+                    else graph = graph1;
+                    if (b) {
+                        try {
+                            graph.getNode(coord.x + "-" + coord.y).setAvailability("available");
+                        } catch (Exception e) {
+
+                        }
+                        try {
+                            graph.getNode("A"+coord.x + "-" + coord.y).setAvailability("available");
+                        } catch (Exception e) {
+
+                        }
+                    }
+                    else {
+                        try {
+                            graph.getNode(coord.x + "-" + coord.y).setAvailability("unavailable");
+                        } catch (Exception e) {
+
+                        }
+                        try {
+                            graph.getNode("A"+coord.x + "-" + coord.y).setAvailability("unavailable");
+                        } catch (Exception e) {
+
+                        }
+                    }
                 } catch (Exception e) {
 
                 }
@@ -1021,10 +1418,33 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             if (dx * dx + dy * dy <= radius * radius) {
                 // Nodo all'interno del raggio
                 try {
-                    if (b)
-                        graph.getNode(coord.x + "-" + coord.y).setCrowdness("notCrow");
-                    else
-                        graph.getNode(coord.x + "-" + coord.y).setCrowdness("crowded");
+                    Graph graph;
+                    if(floor) graph = graph2;
+                    else graph = graph1;
+                    if (b) {
+                        try {
+                            graph.getNode(coord.x + "-" + coord.y).setCrowdness("notCrow");
+                        } catch (Exception e) {
+
+                        }
+                        try {
+                            graph.getNode("A"+coord.x + "-" + coord.y).setCrowdness("notCrow");
+                        } catch (Exception e) {
+
+                        }
+                    }
+                    else {
+                        try {
+                            graph.getNode("A"+coord.x + "-" + coord.y).setCrowdness("crowded");
+                        } catch (Exception e) {
+
+                        }
+                        try {
+                            graph.getNode(coord.x + "-" + coord.y).setCrowdness("crowded");
+                        } catch (Exception e) {
+
+                        }
+                    }
                 } catch (Exception e) {
 
                 }
@@ -1033,6 +1453,9 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     }
 
     private void disegnaTutto(List<Coordinate> whitePoints, boolean b) {
+        Graph graph;
+        if (floor) graph = graph2;
+        else graph = graph1;
         for (Coordinate point : whitePoints) {
             if (graph.getNode(point.x+"-"+ point.y).getAvailability().equals("unavailable")) {
                 mapDrawer.drawIndicator(point.x, point.y, true, 5);
@@ -1094,6 +1517,13 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         indicatorDrawer.drawIndicator(2618f, 2480f, true, 20); */
     }
 
+    private void disegnaScala(int x, int y) {
+        mapDrawer.drawStair(x, y, getApplicationContext());
+    }
+    private void disegnaAscensore(int x, int y) {
+        mapDrawer.drawElevator(x, y);
+    }
+
     private void startScanWithInterval() {
         handler.postDelayed(new Runnable() {
             @Override
@@ -1135,6 +1565,13 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         mapDrawer.drawIndicator(x, y, i, b);
         mapDrawer.drawPath(nodes, mapImage, true);
         //disegnaTutto(whitePoints);
+        //Toast.makeText(this, ""+stairPoints.size(), Toast.LENGTH_SHORT).show();
+        for (Coordinate stairPoint : stairPoints) {
+            disegnaScala(stairPoint.x, stairPoint.y);
+        }
+        for (Coordinate elevator : elevatorPoints) {
+            disegnaAscensore(elevator.x, elevator.y);
+        }
         mapImage.invalidate();
         Matrix newMatrix = new Matrix();
         newMatrix.setScale(currentScale, currentScale);
@@ -1279,7 +1716,12 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 float pointY = touchTransformer.transformY(y, indicatorImage, indicatorBitmap);
                 //Toast.makeText(MainActivity.this, pointX+"  "+pointY, Toast.LENGTH_SHORT).show();
 
-                Graph.Node node = indoorNav.checkNode(graph, pointX, pointY, whitePoints);
+                Graph.Node node = null;
+                if (floor) {
+                    node = indoorNav.checkNode(graph2, pointX, pointY, whitePoints, true, stairPoints, elevatorPoints);
+                } else {
+                    node = indoorNav.checkNode(graph1, pointX, pointY, whitePoints, false, stairPoints, elevatorPoints);
+                }
                 final Dialog dialog = new Dialog(MainActivity.this);
 
                 //  Imposta il layout del tuo dialog personalizzato
@@ -1333,6 +1775,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                     }
                     else
                         sw_crowded.setClickable(true);
+                    Graph.Node finalNode = node;
                     sw_available.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
                         @Override
                         public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
@@ -1344,7 +1787,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                                 loadType.setText("Rimuovendo L'Ostacolo");
                                 loadingDialog.show();
                                 for (Coordinate coord: unavailablePoints) {
-                                    if(Math.abs(coord.x - node.getX()) < 220 && Math.abs(coord.y - node.getY()) < 220) {
+                                    if(Math.abs(coord.x - finalNode.getX()) < 220 && Math.abs(coord.y - finalNode.getY()) < 220) {
                                         unavailablePoints.remove(coord);
                                         updateAvailability(coord.x, coord.y, 110, true);
                                         loadingDismiss = false;
@@ -1352,7 +1795,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                                     }
                                 }
                             } else {
-                                node.setAvailability("unavailable");
+                                finalNode.setAvailability("unavailable");
                                 dialog.dismiss();
                                 loadingDialog = new Dialog(MainActivity.this);
                                 loadingDialog.setContentView(R.layout.loading_dialog);
@@ -1360,18 +1803,25 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                                 TextView loadType = loadingDialog.findViewById(R.id.txt_loading);
                                 loadType.setText("Aggiungendo L'Ostacolo");
                                 loadingDialog.show();
-                                updateAvailability((long) node.getX(), (long) node.getY(), 110, false);
-                                unavailablePoints.add(new Coordinate((int) node.getX(), (int) node.getY()));
+                                updateAvailability((long) finalNode.getX(), (long) finalNode.getY(), 110, false);
+                                unavailablePoints.add(new Coordinate((int) finalNode.getX(), (int) finalNode.getY()));
                                 if(startPoint.getText().toString() != null &&
                                         endPoint.getText().toString() != null && path != null){
-                                    path = graph.findShortestPathAStar(startPoint.getText().toString(),
-                                            endPoint.getText().toString(), stairs, available, crowd);
+                                    if (floor) {
+                                        path = graph2.findShortestPathAStar(startPoint.getText().toString(),
+                                                endPoint.getText().toString(), stairs, available, crowd);
+                                    }
+                                    else{
+                                        path = graph1.findShortestPathAStar(startPoint.getText().toString(),
+                                                endPoint.getText().toString(), stairs, available, crowd);
+                                    }
                                 }
                                 loadingDismiss = false;
                             }
                         }
                     });
 
+                    Graph.Node finalNode1 = node;
                     sw_crowded.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
                         @Override
                         public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
@@ -1383,7 +1833,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                                 loadType.setText("Rimuovendo L'Affollamento");
                                 loadingDialog.show();
                                 for (Coordinate coord: crowdedPoints) {
-                                    if(Math.abs(coord.x - node.getX()) < 220 && Math.abs(coord.y - node.getY()) < 220) {
+                                    if(Math.abs(coord.x - finalNode1.getX()) < 220 && Math.abs(coord.y - finalNode1.getY()) < 220) {
                                         crowdedPoints.remove(coord);
                                         updateSelfCrowd(coord.x, coord.y, 110, true);
                                         loadingDismiss = false;
@@ -1399,8 +1849,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                                 TextView loadType = loadingDialog.findViewById(R.id.txt_loading);
                                 loadType.setText("Aggiungendo L'Affollamento");
                                 loadingDialog.show();
-                                updateSelfCrowd((long) node.getX(), (long) node.getY(), 110, false);
-                                crowdedPoints.add(new Coordinate((int) node.getX(), (int) node.getY()));
+                                updateSelfCrowd((long) finalNode1.getX(), (long) finalNode1.getY(), 110, false);
+                                crowdedPoints.add(new Coordinate((int) finalNode1.getX(), (int) finalNode1.getY()));
                                 if(startPoint.getText().toString() != null &&
                                         endPoint.getText().toString() != null && path != null){
                                     path = graph.findShortestPathAStar(startPoint.getText().toString(),

@@ -2,7 +2,6 @@ package com.example.indoornavigation;
 
 import android.content.Context;
 import android.widget.Toast;
-
 import com.github.chrisbanes.photoview.PhotoView;
 
 import java.util.LinkedList;
@@ -68,10 +67,27 @@ public class IndoorNavigation {
         return null;
     } */
 
-    public Graph.Node checkNode(Graph graph, float pointX, float pointY, List<Coordinate> whitePoints) {
+    public Graph.Node checkNode(Graph graph, float pointX, float pointY, List<Coordinate> whitePoints, boolean floor, List<Coordinate> stairPoints,List<Coordinate> elevatorPoints) {
+        for (Coordinate stair : stairPoints) {
+            int x = stair.x;
+            int y = stair.y;
+            if (Math.abs(x - pointX) <= 100 && Math.abs(y - pointY) <= 100) {
+                return graph.getNode(x+"-"+y);
+            }
+        }
+        for (Coordinate elevator : elevatorPoints) {
+            int x = elevator.x;
+            int y = elevator.y;
+            if (Math.abs(x - pointX) <= 100 && Math.abs(y - pointY) <= 100) {
+                return graph.getNode(x+"-"+y);
+            }
+        }
         for (Coordinate coord : whitePoints) {
             int x = coord.x;
             int y = coord.y;
+            if (Math.abs(x - pointX) <= 20 && Math.abs(y - pointY) <= 20 && floor) {
+                return graph.getNode("A"+x+"-"+y);
+            }
             if (Math.abs(x - pointX) <= 20 && Math.abs(y - pointY) <= 20) {
                 return graph.getNode(x+"-"+y);
             }
