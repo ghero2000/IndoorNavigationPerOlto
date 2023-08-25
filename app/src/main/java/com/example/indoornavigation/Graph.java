@@ -2,7 +2,6 @@ package com.example.indoornavigation;
 
 import android.graphics.Bitmap;
 import android.util.Log;
-import android.widget.Toast;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -10,13 +9,7 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
 import java.util.Set;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.stream.Collectors;
 
 
 /**
@@ -337,10 +330,10 @@ public class Graph {
             String nearestStaircaseNode = "";
             // Find the nearest node with roomType "staircase" from the start
             if(!roomType.equals("stairs")) {
-                nearestStaircaseNode = findNearestStaircaseNode(start);
+                nearestStaircaseNode = findNearestStaircaseNode(start, crowd);
             }
             else {
-                nearestStaircaseNode = findNearestElevatorNode(start);
+                nearestStaircaseNode = findNearestElevatorNode(start, crowd);
             }
             end = nearestStaircaseNode; // Update end to the nearest staircase node
         }
@@ -437,7 +430,7 @@ public class Graph {
         return xDistance + yDistance + penalty;
     }
 
-    private String findNearestStaircaseNode(String start) {
+    private String findNearestStaircaseNode(String start, String crowd) {
         double shortestDistance = Double.POSITIVE_INFINITY;
         double shortestDistanceWithCrowdness = Double.POSITIVE_INFINITY;
         String nearestStaircaseNode = null;
@@ -462,11 +455,14 @@ public class Graph {
         if (shortestDistance == Double.POSITIVE_INFINITY) {
             nearestStaircaseNode = nearestStaircaseNodeWithCrowdness;
         }
+        if (shortestDistanceWithCrowdness <= shortestDistance && crowd.equals("")) {
+            nearestStaircaseNode = nearestStaircaseNodeWithCrowdness;
+        }
 
         return nearestStaircaseNode;
     }
 
-    private String findNearestElevatorNode(String start) {
+    private String findNearestElevatorNode(String start, String crowd) {
         double shortestDistance = Double.POSITIVE_INFINITY;
         double shortestDistanceWithCrowdness = Double.POSITIVE_INFINITY;
         String nearestStaircaseNode = null;
@@ -489,6 +485,10 @@ public class Graph {
         }
 
         if (shortestDistance == Double.POSITIVE_INFINITY) {
+            nearestStaircaseNode = nearestStaircaseNodeWithCrowdness;
+        }
+
+        if (shortestDistanceWithCrowdness <= shortestDistance && crowd.equals("")) {
             nearestStaircaseNode = nearestStaircaseNodeWithCrowdness;
         }
 
