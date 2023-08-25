@@ -22,11 +22,21 @@ import android.net.wifi.WifiManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.RemoteException;
+import android.text.SpannableString;
+import android.text.Spanned;
+import android.text.method.LinkMovementMethod;
+import android.text.style.ClickableSpan;
 import android.util.Log;
+import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewGroup;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
+import android.widget.AutoCompleteTextView;
 import android.widget.Button;
 import android.widget.CompoundButton;
 import android.widget.ImageView;
+import android.widget.ListView;
 import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -40,6 +50,7 @@ import com.github.chrisbanes.photoview.OnMatrixChangedListener;
 import com.github.chrisbanes.photoview.OnViewTapListener;
 import com.github.chrisbanes.photoview.PhotoView;
 import com.google.android.material.textfield.TextInputEditText;
+import com.google.android.material.textfield.TextInputLayout;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
@@ -159,9 +170,10 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private int[] steps = new int[1];
 
     private double MagnitudePrevious = 0;
-    private TextInputEditText startPoint;
 
-    private TextInputEditText endPoint;
+    private AutoCompleteTextView startPoint;
+
+    private AutoCompleteTextView endPoint;
 
     private Switch aSwitch; //stairs
 
@@ -219,6 +231,9 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private boolean safe;
     private Graph graphBackup2 = null;
 
+    private ListView startSuggestionListView;
+    private ListView endSuggestionListView;
+
     /**
      * Metodo onCreate per la creazione dell'activity.
      * Inizializza le variabili e carica l'immagine della planimetria.
@@ -247,8 +262,74 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
         macAddressList = new ArrayList<>();
 
-        startPoint = findViewById(R.id.starPoint);
+        startPoint = findViewById(R.id.startPoint);
         endPoint = findViewById(R.id.endPoint);
+
+        final ListView startSuggestionListView = findViewById(R.id.startSuggestionListView);
+        final ListView endSuggestionListView = findViewById(R.id.endSuggestionListView);
+
+        String[] suggestions = {"Secondo Piano", "Suggerimento 2", "Suggerimento", "Suggerimento", "Suggerimento", "Suggerimento"};
+
+        ArrayAdapter<String> adapter = new ArrayAdapter<String>(this, android.R.layout.simple_dropdown_item_1line, suggestions) {
+            @NonNull
+            @Override
+            public View getView(int position, View convertView, @NonNull ViewGroup parent) {
+                TextView textView = (TextView) super.getView(position, convertView, parent);
+                String suggestion = suggestions[position];
+
+                // Creazione di un ClickableSpan per la parola cliccabile
+                SpannableString spannableString = new SpannableString(suggestion);
+                ClickableSpan clickableSpan = new ClickableSpan() {
+                    @Override
+                    public void onClick(@NonNull View view) {
+                        // Azione da eseguire quando l'utente fa clic sulla parola cliccabile
+                        endPoint.setText(suggestion); // Imposta il testo nell'AutoCompleteTextView
+                        endSuggestionListView.setVisibility(View.GONE); // Nasconde la lista dei suggerimenti
+                    }
+                };
+                spannableString.setSpan(clickableSpan, 0, suggestion.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+
+                textView.setText(spannableString);
+                textView.setMovementMethod(LinkMovementMethod.getInstance()); // Rendi il testo cliccabile
+
+                return textView;
+            }
+        };
+
+        endPoint.setAdapter(adapter);
+
+        endPoint.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                String selectedSuggestion = (String) parent.getItemAtPosition(position);
+                endPoint.setText(selectedSuggestion); // Imposta il testo selezionato nell'AutoCompleteTextView
+                endPoint.setVisibility(View.GONE); // Nasconde la lista dei suggerimenti
+            }
+        });
+
+        endPoint.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                 // Mostra la lista dei suggerimenti
+                endSuggestionListView.setVisibility(View.VISIBLE);
+            }
+        });
+
+        /*
+        // Creazione di un hint cliccabile con SpannableString
+        String hint = "Secondo Piano";
+        SpannableString spannableString = new SpannableString(hint);
+        ClickableSpan clickableSpan = new ClickableSpan() {
+            @Override
+            public void onClick(@NonNull View view) {
+                // Azione da eseguire quando l'utente fa clic sull'hint cliccabile
+                endPoint.setText(hint);
+            }
+        };
+        spannableString.setSpan(clickableSpan, 0, hint.length(), SpannableString.SPAN_EXCLUSIVE_EXCLUSIVE);
+
+        endLayout.setHint(spannableString);
+        endLayout.setHintAnimationEnabled(true); // Per animare l'effetto di hint cliccabile */
 
         btn_start = findViewById(R.id.btn_avvia);
         start[0] = false;
@@ -816,6 +897,10 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         drawBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                if (startPoint.getText().toString().equals("") || endPoint.getText().toString().equals("")) {
+                    Toast.makeText(MainActivity.this, "Inserisci i dati correttamente", Toast.LENGTH_SHORT).show();
+                    return;
+                }
                 clearPath();
                 //path = graph.findShortestPathACO(startPoint.getText().toString(), endPoint.getText().toString(), stairs, available, crowd, 10, 100, 0.1, 1.0, 2.0, 100.0);
                 double startTime = System.currentTimeMillis();

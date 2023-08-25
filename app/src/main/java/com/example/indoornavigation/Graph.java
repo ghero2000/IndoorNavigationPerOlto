@@ -333,7 +333,7 @@ public class Graph {
         openSet.add(start);
         gScore.put(start, 0.0);
 
-        if (end.equals("A")) {
+        if (end.equals("Secondo Piano")) {
             String nearestStaircaseNode = "";
             // Find the nearest node with roomType "staircase" from the start
             if(!roomType.equals("stairs")) {
@@ -439,17 +439,28 @@ public class Graph {
 
     private String findNearestStaircaseNode(String start) {
         double shortestDistance = Double.POSITIVE_INFINITY;
+        double shortestDistanceWithCrowdness = Double.POSITIVE_INFINITY;
         String nearestStaircaseNode = null;
+        String nearestStaircaseNodeWithCrowdness = null;
 
         for (String nodeId : nodes.keySet()) {
             Node node = nodes.get(nodeId);
             if (node.getRoomType().equals("stairs") || node.getRoomType().equals("elevator")) {
                 double distance = calculateDistance(start, nodeId);
-                if (distance < shortestDistance) {
+                double distanceWithCrowdness = calculateDistance(start, nodeId);
+                if (distance < shortestDistance && !node.getCrowdness().equals("crowded")) {
                     shortestDistance = distance;
                     nearestStaircaseNode = nodeId;
                 }
+                if (distanceWithCrowdness < shortestDistanceWithCrowdness && node.getCrowdness().equals("crowded")) {
+                    shortestDistanceWithCrowdness = distanceWithCrowdness;
+                    nearestStaircaseNodeWithCrowdness = nodeId;
+                }
             }
+        }
+
+        if (shortestDistance == Double.POSITIVE_INFINITY) {
+            nearestStaircaseNode = nearestStaircaseNodeWithCrowdness;
         }
 
         return nearestStaircaseNode;
@@ -457,17 +468,28 @@ public class Graph {
 
     private String findNearestElevatorNode(String start) {
         double shortestDistance = Double.POSITIVE_INFINITY;
+        double shortestDistanceWithCrowdness = Double.POSITIVE_INFINITY;
         String nearestStaircaseNode = null;
+        String nearestStaircaseNodeWithCrowdness = null;
 
         for (String nodeId : nodes.keySet()) {
             Node node = nodes.get(nodeId);
             if (node.getRoomType().equals("elevator")) {
                 double distance = calculateDistance(start, nodeId);
-                if (distance < shortestDistance) {
+                double distanceWithCrowdness = calculateDistance(start, nodeId);
+                if (distance < shortestDistance && !node.getCrowdness().equals("crowded")) {
                     shortestDistance = distance;
                     nearestStaircaseNode = nodeId;
                 }
+                if (distanceWithCrowdness < shortestDistanceWithCrowdness && node.getCrowdness().equals("crowded")) {
+                    shortestDistanceWithCrowdness = distance;
+                    nearestStaircaseNodeWithCrowdness = nodeId;
+                }
             }
+        }
+
+        if (shortestDistance == Double.POSITIVE_INFINITY) {
+            nearestStaircaseNode = nearestStaircaseNodeWithCrowdness;
         }
 
         return nearestStaircaseNode;
