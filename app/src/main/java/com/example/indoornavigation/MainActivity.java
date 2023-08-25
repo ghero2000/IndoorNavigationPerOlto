@@ -27,7 +27,6 @@ import android.text.Spanned;
 import android.text.method.LinkMovementMethod;
 import android.text.style.ClickableSpan;
 import android.util.Log;
-import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
@@ -49,8 +48,6 @@ import androidx.core.content.ContextCompat;
 import com.github.chrisbanes.photoview.OnMatrixChangedListener;
 import com.github.chrisbanes.photoview.OnViewTapListener;
 import com.github.chrisbanes.photoview.PhotoView;
-import com.google.android.material.textfield.TextInputEditText;
-import com.google.android.material.textfield.TextInputLayout;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
@@ -102,6 +99,10 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     List<Coordinate> crowdedPoints = new ArrayList<>();
     List<Coordinate> stairPoints = new ArrayList<>();
     List<Coordinate> elevatorPoints = new ArrayList<>();
+    List<Coordinate> unavailablePoints2 = new ArrayList<>();
+    List<Coordinate> crowdedPoints2 = new ArrayList<>();
+    List<Coordinate> stairPoints2 = new ArrayList<>();
+    List<Coordinate> elevatorPoints2 = new ArrayList<>();
 
     private TextView txt_dij, txt_aStar;
     private ImageView btn_up, btn_down;
@@ -1602,10 +1603,16 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         indicatorDrawer.drawIndicator(2618f, 2480f, true, 20); */
     }
 
-    private void disegnaScala(int x, int y) {
+    private void disegnaScala(int x, int y, Graph graph) {
+        if (floor)
+            if (!graph.getNode("A"+x+"-"+y).getRoomType().equals("stairs"))
+                return;
         mapDrawer.drawStair(x, y, getApplicationContext());
     }
-    private void disegnaAscensore(int x, int y) {
+    private void disegnaAscensore(int x, int y, Graph graph) {
+        if (floor)
+            if (!graph.getNode("A"+x+"-"+y).getRoomType().equals("elevator"))
+                return;
         mapDrawer.drawElevator(x, y);
     }
 
@@ -1652,10 +1659,16 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         //disegnaTutto(whitePoints);
         //Toast.makeText(this, ""+stairPoints.size(), Toast.LENGTH_SHORT).show();
         for (Coordinate stairPoint : stairPoints) {
-            disegnaScala(stairPoint.x, stairPoint.y);
+            if (floor)
+                disegnaScala(stairPoint.x, stairPoint.y, graph2);
+            else
+                disegnaScala(stairPoint.x, stairPoint.y, graph1);
         }
         for (Coordinate elevator : elevatorPoints) {
-            disegnaAscensore(elevator.x, elevator.y);
+            if (floor)
+                disegnaAscensore(elevator.x, elevator.y, graph2);
+            else
+                disegnaAscensore(elevator.x, elevator.y, graph1);
         }
         mapImage.invalidate();
         Matrix newMatrix = new Matrix();

@@ -71,14 +71,14 @@ public class IndoorNavigation {
         for (Coordinate stair : stairPoints) {
             int x = stair.x;
             int y = stair.y;
-            if (Math.abs(x - pointX) <= 100 && Math.abs(y - pointY) <= 100) {
+            if (Math.abs(x - pointX) <= 100 && Math.abs(y - pointY) <= 100 && !floor) {
                 return graph.getNode(x+"-"+y);
             }
         }
         for (Coordinate elevator : elevatorPoints) {
             int x = elevator.x;
             int y = elevator.y;
-            if (Math.abs(x - pointX) <= 100 && Math.abs(y - pointY) <= 100) {
+            if (Math.abs(x - pointX) <= 100 && Math.abs(y - pointY) <= 100 && !floor) {
                 return graph.getNode(x+"-"+y);
             }
         }
@@ -88,7 +88,7 @@ public class IndoorNavigation {
             if (Math.abs(x - pointX) <= 20 && Math.abs(y - pointY) <= 20 && floor) {
                 return graph.getNode("A"+x+"-"+y);
             }
-            if (Math.abs(x - pointX) <= 20 && Math.abs(y - pointY) <= 20) {
+            if (Math.abs(x - pointX) <= 20 && Math.abs(y - pointY) <= 20 && !floor) {
                 return graph.getNode(x+"-"+y);
             }
         }
