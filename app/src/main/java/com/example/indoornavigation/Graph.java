@@ -316,7 +316,7 @@ public class Graph {
     } */
 
     //A STAR
-    public List<Node> findShortestPathAStar(String start, String end, String roomType, String available, String crowd) {
+    public List<Node> findShortestPathAStar(String start, String end, String roomType, String available, String crowd, boolean floor) {
         Set<String> openSet = new HashSet<>();
         Set<String> closedSet = new HashSet<>();
         Map<String, String> cameFrom = new HashMap<>();
@@ -326,7 +326,7 @@ public class Graph {
         openSet.add(start);
         gScore.put(start, 0.0);
 
-        if (end.equals("Secondo Piano")) {
+        if ((end.equals("Secondo Piano") && !floor) || (end.equals("Primo Piano") && floor)) {
             String nearestStaircaseNode = "";
             // Find the nearest node with roomType "staircase" from the start
             if(!roomType.equals("stairs")) {
@@ -567,6 +567,10 @@ public class Graph {
 
         public String getRoomType(){
             return roomType;
+        }
+
+        public void setRoomType(String roomType) {
+            this.roomType = roomType;
         }
 
         /**

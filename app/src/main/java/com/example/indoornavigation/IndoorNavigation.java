@@ -69,27 +69,33 @@ public class IndoorNavigation {
 
     public Graph.Node checkNode(Graph graph, float pointX, float pointY, List<Coordinate> whitePoints, boolean floor, List<Coordinate> stairPoints,List<Coordinate> elevatorPoints) {
         for (Coordinate stair : stairPoints) {
-            int x = stair.x;
-            int y = stair.y;
+            int x = stair.getX();
+            int y = stair.getY();
             if (Math.abs(x - pointX) <= 100 && Math.abs(y - pointY) <= 100 && !floor) {
                 return graph.getNode(x+"-"+y);
+            }
+            if (Math.abs(x - pointX) <= 100 && Math.abs(y - pointY) <= 100 && floor) {
+                return graph.getNode("A"+x+"-"+y);
             }
         }
         for (Coordinate elevator : elevatorPoints) {
-            int x = elevator.x;
-            int y = elevator.y;
+            int x = elevator.getX();
+            int y = elevator.getY();
             if (Math.abs(x - pointX) <= 100 && Math.abs(y - pointY) <= 100 && !floor) {
                 return graph.getNode(x+"-"+y);
             }
-        }
-        for (Coordinate coord : whitePoints) {
-            int x = coord.x;
-            int y = coord.y;
-            if (Math.abs(x - pointX) <= 20 && Math.abs(y - pointY) <= 20 && floor) {
+            if (Math.abs(x - pointX) <= 100 && Math.abs(y - pointY) <= 100 && floor) {
                 return graph.getNode("A"+x+"-"+y);
             }
+        }
+        for (Coordinate coord : whitePoints) {
+            int x = coord.getX();
+            int y = coord.getY();
             if (Math.abs(x - pointX) <= 20 && Math.abs(y - pointY) <= 20 && !floor) {
                 return graph.getNode(x+"-"+y);
+            }
+            if (Math.abs(x - pointX) <= 20 && Math.abs(y - pointY) <= 20 && floor) {
+                return graph.getNode("A"+x+"-"+y);
             }
         }
         return null;
