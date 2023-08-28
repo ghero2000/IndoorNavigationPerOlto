@@ -54,11 +54,11 @@ public class IndoorNavigation {
         for (Coordinate stair : stairPoints) {
             int x = stair.getX();
             int y = stair.getY();
-            if (Math.abs(x - pointX) <= 100 && Math.abs(y - pointY) <= 100 && !floor) {
-                return graph.getNode(x+"-"+y);
-            }
             if (Math.abs(x - pointX) <= 100 && Math.abs(y - pointY) <= 100 && floor) {
                 return graph.getNode("A"+x+"-"+y);
+            }
+            if (Math.abs(x - pointX) <= 100 && Math.abs(y - pointY) <= 100 && !floor) {
+                return graph.getNode(x+"-"+y);
             }
         }
         for (Coordinate elevator : elevatorPoints) {

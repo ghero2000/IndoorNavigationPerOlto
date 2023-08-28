@@ -20,6 +20,7 @@ import android.hardware.SensorManager;
 import android.net.wifi.ScanResult;
 import android.net.wifi.WifiManager;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.Handler;
 import android.os.RemoteException;
 import android.text.SpannableString;
@@ -63,6 +64,8 @@ import org.altbeacon.beacon.Region;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.text.DecimalFormat;
@@ -488,11 +491,27 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                     //Toast.makeText(this, "staravia", Toast.LENGTH_SHORT).show();
                     stairPoints.add(new Coordinate(x, y,floor));
                 }
-                if (roomType.equals("elevator")) {
+                if (roomType.equals("elevatorDoor")) {
                     //Toast.makeText(this, "staravia", Toast.LENGTH_SHORT).show();
                     elevatorPoints.add(new Coordinate(x, y,floor));
                 }
                 graphBackup1.addNode(key, x, y, roomType, availability, crowdness);
+                if (x >= 2135 && x <= 2355 && y >= 800 && y <= 1130) {
+                    graph1.getNode(x+"-"+y).setRoomType("staircase");
+                    graphBackup1.getNode(x+"-"+y).setRoomType("staircase");
+                }
+                if (x >= 2075 && x <= 2275 && y >= 1870 && y <= 1980) {
+                    graph1.getNode(x+"-"+y).setRoomType("elevator");
+                    graphBackup1.getNode(x+"-"+y).setRoomType("elevator");
+                }
+                if (x >= 1285 && x <= 1475 && y >= 2500 && y <= 2690) {
+                    graph1.getNode(x+"-"+y).setRoomType("elevator");
+                    graphBackup1.getNode(x+"-"+y).setRoomType("elevator");
+                }
+                if (x >= 2095 && x <= 2315 && y >= 2740 && y <= 3060) {
+                    graph1.getNode(x+"-"+y).setRoomType("staircase");
+                    graphBackup1.getNode(x+"-"+y).setRoomType("staircase");
+                }
             }
         } catch (IOException | JSONException e) {
             e.printStackTrace();
@@ -531,47 +550,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 }
             }
         }
-
-        /*
-        // Ottieni un'istanza del database
-        JSONObject jsonz = new JSONObject();
-
-        // Scrittura dei dati JSON
-        for (Coordinate coord : whitePoints) {
-            String nodeId = coord.x + "-" + coord.y;
-            JSONObject jsonNode = new JSONObject();
-            try {
-                jsonNode.put("x", coord.x);
-                jsonNode.put("y", coord.y);
-                jsonNode.put("roomType", "atrium");
-                jsonNode.put("availability", "available");
-                jsonNode.put("crowdness", "notCrow");
-
-                // Scrivi i dati nel database utilizzando il nodeId come chiave
-                jsonz.put(nodeId, jsonNode);
-            } catch (JSONException e) {
-                e.printStackTrace();
-            }
-        }
-
-
-        try {
-            // Definisci il percorso completo della cartella di destinazione
-            File destinationFolder = new File(Environment.getExternalStorageDirectory(), "Download");
-            if (!destinationFolder.exists()) {
-                destinationFolder.mkdirs();
-            }
-
-            // Crea il percorso completo per il file desiderato
-            File outputFile = new File(destinationFolder, "nodi.json");
-
-            // Scrivi i dati nel file
-            FileOutputStream outputStream = new FileOutputStream(outputFile);
-            outputStream.write(jsonz.toString().getBytes());
-            outputStream.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-        } */
 
         /*
         // Ottieni un'istanza del database
@@ -633,43 +611,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 // Gestisci l'errore
             }
         }); */
-
-        /*graph.addEdge("1", "7", 1);    ////////////////////////////////////////// cancellare
-        graph.addEdge("7", "6", 1);    ////////////////////////////////////////// cancellare
-
-        graph.addEdge("1", "1.1", 1);
-        graph.addEdge("1", "1.2", 1);
-
-        graph.addEdge("2", "2.1", 1);
-
-        graph.addEdge("3", "3.1", 1);
-
-        graph.addEdge("4", "4.1", 1);
-
-        graph.addEdge("5", "5.1", 1);
-
-        graph.addEdge("6", "6.1", 1);
-
-        graph.addEdge("8", "8.1", 1);
-
-        graph.addEdge("8", "8.2", 1);
-
-        graph.addEdge("1", "2.1", 1);
-
-        graph.addEdge("1.2", "2.1", 1);
-        graph.addEdge("1.2", "8.1", 1);
-
-        graph.addEdge("3.1", "8.1", 1);
-
-        graph.addEdge("4.1", "8", 1);
-
-        graph.addEdge("5.1", "8", 1);
-
-        graph.addEdge("6.1", "8.2", 1);
-
-        graph.addEdge("7", "8.2", 1);
-
-        graph.addEdge("9", "1.1", 1); */
 
         mapImage = findViewById(R.id.map_image);
         mapImage.setImageDrawable(map);
@@ -788,17 +729,22 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             @Override
             public void onClick(View v) {
                 if(!floor) {
+                    loadingDialog = new Dialog(MainActivity.this);
+                    loadingDialog.setContentView(R.layout.loading_dialog);
+                    TextView loadType = loadingDialog.findViewById(R.id.txt_loading);
+                    loadType.setText("Calcolo Del Secondo Piano...");
+                    loadingDialog.show();
                     floor = true;
-                    if (endPoint.getText().toString().equals("2255-1140") || path.get(path.size()-1).getId().equals("2255-1140")) {
+                    if (endPoint.getText().toString().equals("2255-1140") || (path != null && path.get(path.size()-1).getId().equals("2255-1140"))) {
                         startPoint.setText("A2255-1140");
                     }
-                    if (endPoint.getText().toString().equals("2175-1990") || path.get(path.size()-1).getId().equals("2175-1990")) {
+                    if (endPoint.getText().toString().equals("2175-1990") || (path != null && path.get(path.size()-1).getId().equals("2175-1990"))) {
                         startPoint.setText("A2175-1990");
                     }
-                    if (endPoint.getText().toString().equals("1385-2700") || path.get(path.size()-1).getId().equals("1385-2700")) {
+                    if (endPoint.getText().toString().equals("1385-2700") || (path != null && path.get(path.size()-1).getId().equals("1385-2700"))) {
                         startPoint.setText("A1385-2700");
                     }
-                    if (endPoint.getText().toString().equals("2215-3070") || path.get(path.size()-1).getId().equals("2255-3070")) {
+                    if (endPoint.getText().toString().equals("2215-3070") || (path != null && path.get(path.size()-1).getId().equals("2255-3070"))) {
                         startPoint.setText("A2215-3070");
                     }
                     path = null;
@@ -820,6 +766,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                     mapImage.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
                     //mapImage.invalidate();
 
+                    /*
                     if (graph2 == null) {
                         graph2 = new Graph(mapBitmap);
                         graphBackup2 = new Graph(mapBitmap);
@@ -904,6 +851,45 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                                 }
                             }
                         }
+                        // Ottieni un'istanza del database
+                        JSONObject jsonz = new JSONObject();
+
+                        // Scrittura dei dati JSON
+                        for (Coordinate coord : whitePoints) {
+                            String nodeId = "A"+coord.getX() + "-" + coord.getY();
+                            JSONObject jsonNode = new JSONObject();
+                            try {
+                                jsonNode.put("x", coord.getX());
+                                jsonNode.put("y", coord.getY());
+                                jsonNode.put("roomType", "atrium");
+                                jsonNode.put("availability", "available");
+                                jsonNode.put("crowdness", "notCrow");
+
+                                // Scrivi i dati nel database utilizzando il nodeId come chiave
+                                jsonz.put(nodeId, jsonNode);
+                            } catch (JSONException e) {
+                                e.printStackTrace();
+                            }
+                        }
+
+
+                        try {
+                            // Definisci il percorso completo della cartella di destinazione
+                            File destinationFolder = new File(Environment.getExternalStorageDirectory(), "Download");
+                            if (!destinationFolder.exists()) {
+                                destinationFolder.mkdirs();
+                            }
+
+                            // Crea il percorso completo per il file desiderato
+                            File outputFile = new File(destinationFolder, "nodes2.json");
+
+                            // Scrivi i dati nel file
+                            FileOutputStream outputStream = new FileOutputStream(outputFile);
+                            outputStream.write(jsonz.toString().getBytes());
+                            outputStream.close();
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
                     }
                     else {
                         // Lista per salvare le coordinate dei punti neri
@@ -954,8 +940,104 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                                 }
                             }
                         }
+                    } */
+
+                    try {
+                        if (graph2 == null){
+                            graph2 = new Graph(mapBitmap);
+                            graphBackup2 = new Graph(mapBitmap);
+                        }
+                        // Ottieni il contenuto del file JSON dalla cartella "assets"
+                        InputStream inputStream = getAssets().open("nodes2.json");
+                        int size = inputStream.available();
+                        byte[] buffer = new byte[size];
+                        inputStream.read(buffer);
+                        inputStream.close();
+
+                        // Converti il contenuto in una stringa JSON
+                        String json = new String(buffer, "UTF-8");
+
+                        // Parse del JSON
+                        JSONObject jsonObject = new JSONObject(json);
+
+                        // Ciclo attraverso gli oggetti nel JSON e aggiungi i nodi al grafo
+                        Iterator<String> keys = jsonObject.keys();
+                        while (keys.hasNext()) {
+                            String key = keys.next();
+                            JSONObject nodeJson = jsonObject.getJSONObject(key);
+
+                            int x = nodeJson.getInt("x");
+                            int y = nodeJson.getInt("y");
+                            String roomType = nodeJson.getString("roomType");
+                            String availability = nodeJson.getString("availability");
+                            String crowdness = nodeJson.getString("crowdness");
+
+                            // Aggiungi il nodo al grafo
+                            whitePoints.add(new Coordinate(x,y,floor));
+                            graph2.addNode(key, x, y, roomType, availability, crowdness);
+                            if (roomType.equals("stairs")) {
+                                //Toast.makeText(this, "staravia", Toast.LENGTH_SHORT).show();
+                                stairPoints.add(new Coordinate(x, y, floor));
+                            }
+                            if (roomType.equals("elevatorDoor")) {
+                                //Toast.makeText(this, "staravia", Toast.LENGTH_SHORT).show();
+                                elevatorPoints.add(new Coordinate(x, y, floor));
+                            }
+                            graphBackup2.addNode(key, x, y, roomType, availability, crowdness);
+                        }
+                    } catch (IOException | JSONException e) {
+                        e.printStackTrace();
+                    }
+                    for (Coordinate coord : whitePoints) {
+                        int x = coord.getX();
+                        int y = coord.getY();
+
+                        for (int dy = -10; dy <= 10; dy += 10) {
+                            for (int dx = -10; dx <= 10; dx += 10) {
+                                if (dx == 0 && dy == 0) {
+                                    continue;  // Salta il nodo stesso
+                                }
+
+                                int adjacentX = x + dx;
+                                int adjacentY = y + dy;
+                                String adjacentNodeId = "A"+ adjacentX + "-" + adjacentY;
+                                //Log.d("cieck", ""+adjacentNodeId);
+
+                                String startNodeId = "A" + x + "-" + y;
+
+                                // Verifica che il nodo associato alle coordinate sia presente nella lista dei nodi
+                                if (graph2.getNode(startNodeId) != null && graph2.getNode(adjacentNodeId) != null) {
+                                    // Aggiungi l'arco tra i nodi
+                                    graph2.addEdge(startNodeId, adjacentNodeId, 1);
+                                    //Toast.makeText(MainActivity.this, ""+startNodeId+"-"+adjacentNodeId, Toast.LENGTH_SHORT).show();
+                                    graphBackup2.addEdge(startNodeId, adjacentNodeId, 1);
+                                    safe = true;
+                                    //Log.d("procopio", ""+adjacentNodeId);
+                                }
+                                else {
+                                    Log.d("procopio", "ciao");
+                                }
+                            }
+                        }
+                        if (x >= 2135 && x <= 2355 && y >= 800 && y <= 1170) {
+                            graph2.getNode("A"+x+"-"+y).setRoomType("staircase");
+                            graphBackup2.getNode("A"+x+"-"+y).setRoomType("staircase");
+                        }
+                        if (x >= 2075 && x <= 2275 && y >= 1870 && y <= 2090) {
+                            graph2.getNode("A"+x+"-"+y).setRoomType("elevator");
+                            graphBackup2.getNode("A"+x+"-"+y).setRoomType("elevator");
+                        }
+                        if (x >= 1295 && x <= 1455 && y >= 2600 && y <= 2800) {
+                            graph2.getNode("A"+x+"-"+y).setRoomType("elevator");
+                            graphBackup2.getNode("A"+x+"-"+y).setRoomType("elevator");
+                        }
+                        if (x >= 2095 && x <= 2315 && y >= 2740 && y <= 3120) {
+                            graph2.getNode("A"+x+"-"+y).setRoomType("staircase");
+                            graphBackup2.getNode("A"+x+"-"+y).setRoomType("staircase");
+                        }
                     }
                 }
+                //loadingDialog.dismiss();
             }
         });
 
@@ -963,6 +1045,11 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             @Override
             public void onClick(View v) {
                 if (floor) {
+                    loadingDialog = new Dialog(MainActivity.this);
+                    loadingDialog.setContentView(R.layout.loading_dialog);
+                    TextView loadType = loadingDialog.findViewById(R.id.txt_loading);
+                    loadType.setText("Calcolo Del Primo Piano...");
+                    loadingDialog.show();
                     floor = false;
                     path = null;
                     whitePoints.clear();
@@ -1182,6 +1269,11 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 node.setFixed(false);
             } catch (Exception e) {}
 
+            if (dx * dx + dy * dy <= radius * radius) {
+                node.setCrowdness("crowded");
+                node.setFixed(true);
+            }
+
             for (Coordinate coordCrowded : crowdedPoints) {
                 String crowdedNodeKey = coordCrowded.isFloor() ? "A" + coordCrowded.getX() + "-" + coordCrowded.getY() : coordCrowded.getX() + "-" + coordCrowded.getY();
                 Graph.Node crowdedNode = graph.getNode(crowdedNodeKey);
@@ -1362,15 +1454,23 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
     private void disegnaScala(int x, int y, Graph graph) {
         if (floor)
-            if (!graph.getNode("A"+x+"-"+y).getRoomType().equals("stairs")) {
+            if (graph.getNode("A"+x+"-"+y) != null && !graph.getNode("A"+x+"-"+y).getRoomType().equals("stairs")) {
                 graph.getNode("A"+x+"-"+y).setRoomType("stairs");
+            }
+        else
+            if (graph.getNode(x+"-"+y) != null && !graph.getNode(x+"-"+y).getRoomType().equals("stairs")) {
+                graph.getNode(x+"-"+y).setRoomType("stairs");
             }
         mapDrawer.drawStair(x, y, getApplicationContext());
     }
     private void disegnaAscensore(int x, int y, Graph graph) {
         if (floor)
-            if (!graph.getNode("A"+x+"-"+y).getRoomType().equals("elevator")){
-                graph.getNode("A"+x+"-"+y).setRoomType("elevator");
+            if (graph.getNode("A"+x+"-"+y) != null && !graph.getNode("A"+x+"-"+y).getRoomType().equals("elevatorDoor")){
+                graph.getNode("A"+x+"-"+y).setRoomType("elevatorDoor");
+            }
+        else
+            if (graph.getNode(x+"-"+y) != null && !graph.getNode(x+"-"+y).getRoomType().equals("elevatorDoor")){
+                graph.getNode(x+"-"+y).setRoomType("elevatorDoor");
             }
         mapDrawer.drawElevator(x, y);
     }

@@ -2,6 +2,7 @@ package com.example.indoornavigation;
 
 import android.graphics.Bitmap;
 import android.util.Log;
+import android.widget.Toast;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -419,11 +420,13 @@ public class Graph {
         boolean roomTypeSatisfied = currentNode.getRoomType().equals(roomType);
         boolean availableSatisfied = currentNode.getAvailability().equals(available);
         boolean crowdSatisfied = currentNode.getCrowdness().equals(crowd);
+        boolean roomTypeStaircaseSatisfied = currentNode.getRoomType().equals("staircase");
+        boolean roomTypeElevatorSatisfied = currentNode.getRoomType().equals("elevator");
         //Log.d("crowd", ""+crowdSatisfied);
 
         double penalty = 0.0;
-        if (roomTypeSatisfied || availableSatisfied || crowdSatisfied) {
-            penalty = 14000.0; // Apply a penalty if constraints are not satisfied
+        if (roomTypeSatisfied || availableSatisfied || crowdSatisfied || roomTypeStaircaseSatisfied || roomTypeElevatorSatisfied) {
+            penalty = 2000000.0; // Apply a penalty if constraints are not satisfied
             Log.d("crowd", ""+penalty);
         }
 
@@ -440,7 +443,7 @@ public class Graph {
 
         for (String nodeId : nodes.keySet()) {
             Node node = nodes.get(nodeId);
-            if (node.getRoomType().equals("stairs") || node.getRoomType().equals("elevator")) {
+            if (node.getRoomType().equals("stairs") || node.getRoomType().equals("elevatorDoor")) {
                 double distance = calculateDistance(start, nodeId);
                 double distanceWithCrowdness = distance;
                 double distanceWithObstacle = distance;
@@ -452,7 +455,7 @@ public class Graph {
                     shortestDistanceWithCrowdness = distanceWithCrowdness;
                     nearestStaircaseNodeWithCrowdness = nodeId;
                 }
-                if (distanceWithObstacle < shortestDistanceWithObstacle && (node.getAvailability().equals("unavailable"))) {
+                if (distanceWithObstacle < shortestDistanceWithObstacle && !node.getAvailability().equals("available")) {
                     shortestDistanceWithObstacle = distanceWithObstacle;
                     nearestStaircaseNodeWithObstacle = nodeId;
                 }
@@ -460,8 +463,17 @@ public class Graph {
         }
 
         if (shortestDistance == Double.POSITIVE_INFINITY) {
-            nearestStaircaseNode = nearestStaircaseNodeWithCrowdness;
+            if (shortestDistanceWithCrowdness == Double.POSITIVE_INFINITY)
+                nearestStaircaseNode = nearestStaircaseNodeWithObstacle;
+            else
+                if (shortestDistanceWithObstacle == Double.POSITIVE_INFINITY)
+                    nearestStaircaseNode = nearestStaircaseNodeWithCrowdness;
+                else if (shortestDistanceWithObstacle < shortestDistanceWithCrowdness)
+                    nearestStaircaseNode = nearestStaircaseNodeWithObstacle;
+                else
+                    nearestStaircaseNode = nearestStaircaseNodeWithCrowdness;
         }
+
         if (shortestDistanceWithCrowdness <= shortestDistance && crowd.equals("")) {
             if (shortestDistanceWithObstacle < shortestDistanceWithCrowdness && available.equals(""))
                 nearestStaircaseNode = nearestStaircaseNodeWithObstacle;
@@ -482,11 +494,12 @@ public class Graph {
 
         for (String nodeId : nodes.keySet()) {
             Node node = nodes.get(nodeId);
-            if (node.getRoomType().equals("elevator")) {
+            if (node.getRoomType().equals("elevatorDoor")) {
                 double distance = calculateDistance(start, nodeId);
-                double distanceWithCrowdness = distance;
-                double distanceWithObstacle = distance;
+                double distanceWithCrowdness = calculateDistance(start, nodeId);
+                double distanceWithObstacle = calculateDistance(start, nodeId);
                 if (distance < shortestDistance && !node.getCrowdness().equals("crowded") && node.getAvailability().equals("available")) {
+                    Log.d("prova9", "a"+available);
                     shortestDistance = distance;
                     nearestStaircaseNode = nodeId;
                 }
@@ -494,15 +507,25 @@ public class Graph {
                     shortestDistanceWithCrowdness = distance;
                     nearestStaircaseNodeWithCrowdness = nodeId;
                 }
-                if (distanceWithObstacle < shortestDistanceWithObstacle && node.getAvailability().equals("unavailable")) {
+                if (distanceWithObstacle < shortestDistanceWithObstacle && !node.getAvailability().equals("available")) {
                     shortestDistanceWithObstacle = distance;
                     nearestStaircaseNodeWithObstacle = nodeId;
                 }
             }
         }
 
-        if (shortestDistance == Double.POSITIVE_INFINITY) {
-            nearestStaircaseNode = nearestStaircaseNodeWithCrowdness;
+        nearestStaircaseNode = nearestStaircaseNodeWithObstacle;
+        /*if (shortestDistance == Double.POSITIVE_INFINITY) {
+            if (shortestDistanceWithCrowdness == Double.POSITIVE_INFINITY)
+                nearestStaircaseNode = nearestStaircaseNodeWithObstacle;
+            else {
+                if (shortestDistanceWithObstacle == Double.POSITIVE_INFINITY)
+                    nearestStaircaseNode = nearestStaircaseNodeWithCrowdness;
+                else if (shortestDistanceWithObstacle < shortestDistanceWithCrowdness)
+                    nearestStaircaseNode = nearestStaircaseNodeWithObstacle;
+                else
+                    nearestStaircaseNode = nearestStaircaseNodeWithCrowdness;
+            }
         }
 
         if (shortestDistanceWithCrowdness <= shortestDistance && crowd.equals("")) {
@@ -510,7 +533,7 @@ public class Graph {
                 nearestStaircaseNode = nearestStaircaseNodeWithObstacle;
             else
                 nearestStaircaseNode = nearestStaircaseNodeWithCrowdness;
-        }
+        } */
 
         return nearestStaircaseNode;
     }

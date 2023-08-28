@@ -175,6 +175,7 @@ public class MapDrawer {
         mapCanvas.drawCircle(x, y, radius, paint);
     }
 
+    /*
     public void drawElevator(int x, int y) {
         int centerX = x;
         int centerY = y;
@@ -185,7 +186,7 @@ public class MapDrawer {
         int stepCount = 3;
         int stepHeight = ladderHeight / stepCount;
         int doorWidth = 40;
-        int doorHeight = 140;
+        int doorHeight = 160;
 
         Paint paint = new Paint();
 
@@ -200,11 +201,43 @@ public class MapDrawer {
         paint.setColor(Color.GRAY);
 
         // Draw elevator doors
-        int doorX1 = centerX - elevatorWidth / 4 - doorWidth / 2;
-        int doorX2 = centerX + elevatorWidth / 4 - doorWidth / 2;
+        int doorX1 = 5+centerX - elevatorWidth / 4 - doorWidth / 2;
+        int doorX2 = (centerX + elevatorWidth / 4 - doorWidth / 2)-5;
         mapCanvas.drawRect(doorX1, 15+elevatorY, doorX1 + doorWidth, elevatorY + doorHeight, paint);
         mapCanvas.drawRect(doorX2, 15+elevatorY, doorX2 + doorWidth, elevatorY + doorHeight, paint);
+    } */
+
+    public void drawElevator(int bottomX, int bottomY) {
+        int elevatorWidth = 120;
+        int elevatorHeight = 160;
+        int ladderHeight = 80;
+        int stepCount = 3;
+        int stepHeight = ladderHeight / stepCount;
+        int doorWidth = 40;
+        int doorHeight = 160;
+
+        Paint paint = new Paint();
+
+        paint.setColor(Color.BLACK);
+        paint.setStrokeWidth(10);
+
+        // Calculate elevator top position based on bottom position
+        int elevatorTopY = bottomY - elevatorHeight;
+
+        // Draw elevator
+        mapCanvas.drawRect(bottomX - elevatorWidth / 2, elevatorTopY - 10,
+                bottomX + elevatorWidth / 2, bottomY - 10, paint);
+
+        paint.setColor(Color.GRAY);
+
+        // Draw elevator doors
+        int doorX1 = bottomX - doorWidth / 2 - 24;
+        int doorX2 = bottomX + doorWidth / 2 - 16;
+        mapCanvas.drawRect(doorX1, elevatorTopY + 20 - 10, doorX1 + doorWidth, bottomY - 10, paint);
+        mapCanvas.drawRect(doorX2, elevatorTopY + 20 - 10, doorX2 + doorWidth, bottomY - 10, paint);
     }
+
+
 
     public void drawStair(int x, int y, Context applicationContext) {
         int centerX = x;
