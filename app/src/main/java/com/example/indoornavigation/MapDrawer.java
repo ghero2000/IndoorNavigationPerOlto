@@ -178,14 +178,14 @@ public class MapDrawer {
     public void drawElevator(int x, int y) {
         int centerX = x;
         int centerY = y;
-        int elevatorWidth = 60;
-        int elevatorHeight = 80;
+        int elevatorWidth = 120;
+        int elevatorHeight = 160;
         //int ladderWidth = 40;
         int ladderHeight = 80;
         int stepCount = 3;
         int stepHeight = ladderHeight / stepCount;
-        int doorWidth = 20;
-        int doorHeight = 80;
+        int doorWidth = 40;
+        int doorHeight = 140;
 
         Paint paint = new Paint();
 
@@ -202,16 +202,16 @@ public class MapDrawer {
         // Draw elevator doors
         int doorX1 = centerX - elevatorWidth / 4 - doorWidth / 2;
         int doorX2 = centerX + elevatorWidth / 4 - doorWidth / 2;
-        mapCanvas.drawRect(doorX1, elevatorY, doorX1 + doorWidth, elevatorY + doorHeight, paint);
-        mapCanvas.drawRect(doorX2, elevatorY, doorX2 + doorWidth, elevatorY + doorHeight, paint);
+        mapCanvas.drawRect(doorX1, 15+elevatorY, doorX1 + doorWidth, elevatorY + doorHeight, paint);
+        mapCanvas.drawRect(doorX2, 15+elevatorY, doorX2 + doorWidth, elevatorY + doorHeight, paint);
     }
 
     public void drawStair(int x, int y, Context applicationContext) {
         int centerX = x;
         int centerY = y;
-        int ladderWidth = 40;
-        int ladderHeight = 80;
-        int stepCount = 3;
+        int ladderWidth = 120;
+        int ladderHeight = 300;
+        int stepCount = 10;
         int stepHeight = ladderHeight / stepCount;
 
         Paint paint = new Paint();

@@ -50,23 +50,6 @@ public class IndoorNavigation {
 
     }
 
-    /*
-    public Graph.Node checkNode(Graph graph, float pointX, float pointY) {
-        String id = "1";
-        while (graph.getNode(id) != null) {
-            Graph.Node node = graph.getNode(id);
-            if (Math.abs(pointX - node.getX()) <= 200) {
-                if (Math.abs(pointY - node.getY()) <= 200) {
-                    return node;
-                }
-            }
-            int a = Integer.parseInt(id);
-            a++;
-            id = String.valueOf(a);
-        }
-        return null;
-    } */
-
     public Graph.Node checkNode(Graph graph, float pointX, float pointY, List<Coordinate> whitePoints, boolean floor, List<Coordinate> stairPoints,List<Coordinate> elevatorPoints) {
         for (Coordinate stair : stairPoints) {
             int x = stair.getX();

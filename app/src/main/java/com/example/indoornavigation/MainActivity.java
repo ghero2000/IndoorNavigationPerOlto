@@ -789,16 +789,16 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             public void onClick(View v) {
                 if(!floor) {
                     floor = true;
-                    if (endPoint.getText().toString().equals("2255-1140")) {
+                    if (endPoint.getText().toString().equals("2255-1140") || path.get(path.size()-1).getId().equals("2255-1140")) {
                         startPoint.setText("A2255-1140");
                     }
-                    if (endPoint.getText().toString().equals("2175-1990")) {
+                    if (endPoint.getText().toString().equals("2175-1990") || path.get(path.size()-1).getId().equals("2175-1990")) {
                         startPoint.setText("A2175-1990");
                     }
-                    if (endPoint.getText().toString().equals("1385-2700")) {
+                    if (endPoint.getText().toString().equals("1385-2700") || path.get(path.size()-1).getId().equals("1385-2700")) {
                         startPoint.setText("A1385-2700");
                     }
-                    if (endPoint.getText().toString().equals("2215-3070")) {
+                    if (endPoint.getText().toString().equals("2215-3070") || path.get(path.size()-1).getId().equals("2255-3070")) {
                         startPoint.setText("A2215-3070");
                     }
                     path = null;
