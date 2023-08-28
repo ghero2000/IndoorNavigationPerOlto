@@ -660,9 +660,9 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 startTime = System.currentTimeMillis();
                 try {
                     if(floor)
-                        path = graph2.findShortestPathAStar(startPoint.getText().toString(), endPoint.getText().toString(), stairs, available, crowd, floor);
+                        path = graph2.findShortestPathAStar(startPoint.getText().toString(), endPoint.getText().toString(), stairs, "", crowd, floor);
                     else
-                        path = graph1.findShortestPathAStar(startPoint.getText().toString(), endPoint.getText().toString(), stairs, available, crowd, floor);
+                        path = graph1.findShortestPathAStar(startPoint.getText().toString(), endPoint.getText().toString(), stairs, "", crowd, floor);
                 } catch (Exception e) {
                     //
                 }
@@ -1668,158 +1668,161 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         indicatorImage.setOnViewTapListener(new OnViewTapListener() {
             @Override
             public void onViewTap(View view, float x, float y) {
-                //879 1091
-                float pointX = touchTransformer.transformX(x, indicatorImage, indicatorBitmap);
-                float pointY = touchTransformer.transformY(y, indicatorImage, indicatorBitmap);
-                //Toast.makeText(MainActivity.this, pointX+"  "+pointY, Toast.LENGTH_SHORT).show();
+                try {
+                    //879 1091
+                    float pointX = touchTransformer.transformX(x, indicatorImage, indicatorBitmap);
+                    float pointY = touchTransformer.transformY(y, indicatorImage, indicatorBitmap);
+                    //Toast.makeText(MainActivity.this, pointX+"  "+pointY, Toast.LENGTH_SHORT).show();
 
-                Graph.Node node = null;
-                if (floor) {
-                    node = indoorNav.checkNode(graph2, pointX, pointY, whitePoints, true, stairPoints, elevatorPoints);
-                } else {
-                    node = indoorNav.checkNode(graph1, pointX, pointY, whitePoints, false, stairPoints, elevatorPoints);
+                    Graph.Node node = null;
+                    if (floor) {
+                        node = indoorNav.checkNode(graph2, pointX, pointY, whitePoints, true, stairPoints, elevatorPoints);
+                    } else {
+                        node = indoorNav.checkNode(graph1, pointX, pointY, whitePoints, false, stairPoints, elevatorPoints);
+                    }
+                    final Dialog dialog = new Dialog(MainActivity.this);
+
+                    //  Imposta il layout del tuo dialog personalizzato
+                    dialog.setContentView(R.layout.custom_dialog);
+
+                    TextView node_name = dialog.findViewById(R.id.node_name);
+                    TextView node_id = dialog.findViewById(R.id.node_id);
+                    TextView node_type = dialog.findViewById(R.id.node_type);
+
+                    if (node != null) {
+                        node_name.setText("Node: " + node.getId());
+                        node_id.setText(node.getId());
+                        node_type.setText(node.getRoomType());
+
+                        Button btn_starting = dialog.findViewById(R.id.start_btn);
+                        Button btn_end = dialog.findViewById(R.id.end_btn);
+
+                        Switch sw_crowded = dialog.findViewById(R.id.sw_crowded);
+                        Switch sw_available = dialog.findViewById(R.id.sw_available);
+
+                        btn_starting.setOnClickListener(new View.OnClickListener() {
+                            @Override
+                            public void onClick(View v) {
+                                startPoint.setText(node_id.getText().toString());
+                                dialog.dismiss();
+                            }
+                        });
+
+                        btn_end.setOnClickListener(new View.OnClickListener() {
+                            @Override
+                            public void onClick(View v) {
+                                endPoint.setText(node_id.getText().toString());
+                                dialog.dismiss();
+                            }
+                        });
+                        if (node.getAvailability().equals("available")) {
+                            sw_available.setChecked(true);
+                        }
+                        if (node.getAvailability().equals("unavailable")) {
+                            sw_available.setChecked(false);
+                        }
+                        if (node.getCrowdness().equals("crowded")) {
+                            sw_crowded.setChecked(true);
+                        }
+                        if (node.getCrowdness().equals("notCrow")) {
+                            sw_crowded.setChecked(false);
+                        }
+                        if (node.isFixed()) {
+                            sw_crowded.setClickable(false);
+                            Toast.makeText(MainActivity.this, "L'affollamento e' relativo ad una persona, non può essere rimosso", Toast.LENGTH_SHORT).show();
+                        } else
+                            sw_crowded.setClickable(true);
+                        Graph.Node finalNode = node;
+                        sw_available.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+                            @Override
+                            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                                if (sw_available.isChecked()) {
+                                    dialog.dismiss();
+                                    loadingDialog = new Dialog(MainActivity.this);
+                                    loadingDialog.setContentView(R.layout.loading_dialog);
+                                    TextView loadType = loadingDialog.findViewById(R.id.txt_loading);
+                                    loadType.setText("Rimuovendo L'Ostacolo");
+                                    loadingDialog.show();
+                                    for (Coordinate coord : unavailablePoints) {
+                                        if (Math.abs(coord.getX() - finalNode.getX()) < 220 && Math.abs(coord.getY() - finalNode.getY()) < 220) {
+                                            unavailablePoints.remove(coord);
+                                            updateAvailability(coord.getX(), coord.getY(), 110, true);
+                                            loadingDismiss = false;
+                                            break;
+                                        }
+                                    }
+                                } else {
+                                    finalNode.setAvailability("unavailable");
+                                    dialog.dismiss();
+                                    loadingDialog = new Dialog(MainActivity.this);
+                                    loadingDialog.setContentView(R.layout.loading_dialog);
+                                    loadingDialog.setContentView(R.layout.loading_dialog);
+                                    TextView loadType = loadingDialog.findViewById(R.id.txt_loading);
+                                    loadType.setText("Aggiungendo L'Ostacolo");
+                                    loadingDialog.show();
+                                    updateAvailability((long) finalNode.getX(), (long) finalNode.getY(), 110, false);
+                                    unavailablePoints.add(new Coordinate((int) finalNode.getX(), (int) finalNode.getY(), floor));
+                                    if (startPoint.getText().toString() != null &&
+                                            endPoint.getText().toString() != null && path != null) {
+                                        if (floor) {
+                                            path = graph2.findShortestPathAStar(startPoint.getText().toString(),
+                                                    endPoint.getText().toString(), stairs, available, crowd, floor);
+                                        } else {
+                                            path = graph1.findShortestPathAStar(startPoint.getText().toString(),
+                                                    endPoint.getText().toString(), stairs, available, crowd, floor);
+                                        }
+                                    }
+                                    loadingDismiss = false;
+                                }
+                            }
+                        });
+
+                        Graph.Node finalNode1 = node;
+                        sw_crowded.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+                            @Override
+                            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                                if (!sw_crowded.isChecked()) {
+                                    dialog.dismiss();
+                                    loadingDialog = new Dialog(MainActivity.this);
+                                    loadingDialog.setContentView(R.layout.loading_dialog);
+                                    TextView loadType = loadingDialog.findViewById(R.id.txt_loading);
+                                    loadType.setText("Rimuovendo L'Affollamento");
+                                    loadingDialog.show();
+                                    for (Coordinate coord : crowdedPoints) {
+                                        if (Math.abs(coord.getX() - finalNode1.getX()) < 220 && Math.abs(coord.getY() - finalNode1.getY()) < 220) {
+                                            crowdedPoints.remove(coord);
+                                            updateSelfCrowd(coord.getX(), coord.getY(), 110, true);
+                                            loadingDismiss = false;
+                                            break;
+                                        }
+                                    }
+                                } else {
+                                    //node.setCrowdness("crowded");
+                                    dialog.dismiss();
+                                    loadingDialog = new Dialog(MainActivity.this);
+                                    loadingDialog.setContentView(R.layout.loading_dialog);
+                                    loadingDialog.setContentView(R.layout.loading_dialog);
+                                    TextView loadType = loadingDialog.findViewById(R.id.txt_loading);
+                                    loadType.setText("Aggiungendo L'Affollamento");
+                                    loadingDialog.show();
+                                    updateSelfCrowd((long) finalNode1.getX(), (long) finalNode1.getY(), 110, false);
+                                    crowdedPoints.add(new Coordinate((int) finalNode1.getX(), (int) finalNode1.getY(), floor));
+                                    if (startPoint.getText().toString() != null &&
+                                            endPoint.getText().toString() != null && path != null) {
+                                        path = graph.findShortestPathAStar(startPoint.getText().toString(),
+                                                endPoint.getText().toString(), stairs, available, crowd, floor);
+                                    }
+                                    loadingDismiss = false;
+                                }
+                            }
+                        });
+
+                        // Mostra il dialog
+                        dialog.show();
+                    }
                 }
-                final Dialog dialog = new Dialog(MainActivity.this);
+                catch (Exception e) {
 
-                //  Imposta il layout del tuo dialog personalizzato
-                dialog.setContentView(R.layout.custom_dialog);
-
-                TextView node_name = dialog.findViewById(R.id.node_name);
-                TextView node_id = dialog.findViewById(R.id.node_id);
-                TextView node_type = dialog.findViewById(R.id.node_type);
-
-                if (node != null) {
-                    node_name.setText("Node: " + node.getId());
-                    node_id.setText(node.getId());
-                    node_type.setText(node.getRoomType());
-
-                    Button btn_starting = dialog.findViewById(R.id.start_btn);
-                    Button btn_end = dialog.findViewById(R.id.end_btn);
-
-                    Switch sw_crowded = dialog.findViewById(R.id.sw_crowded);
-                    Switch sw_available = dialog.findViewById(R.id.sw_available);
-
-                    btn_starting.setOnClickListener(new View.OnClickListener() {
-                        @Override
-                        public void onClick(View v) {
-                            startPoint.setText(node_id.getText().toString());
-                            dialog.dismiss();
-                        }
-                    });
-
-                    btn_end.setOnClickListener(new View.OnClickListener() {
-                        @Override
-                        public void onClick(View v) {
-                            endPoint.setText(node_id.getText().toString());
-                            dialog.dismiss();
-                        }
-                    });
-                    if (node.getAvailability().equals("available")) {
-                        sw_available.setChecked(true);
-                    }
-                    if (node.getAvailability().equals("unavailable")) {
-                        sw_available.setChecked(false);
-                    }
-                    if (node.getCrowdness().equals("crowded")) {
-                        sw_crowded.setChecked(true);
-                    }
-                    if (node.getCrowdness().equals("notCrow")) {
-                        sw_crowded.setChecked(false);
-                    }
-                    if (node.isFixed()) {
-                        sw_crowded.setClickable(false);
-                        Toast.makeText(MainActivity.this, "L'affollamento e' relativo ad una persona, non può essere rimosso", Toast.LENGTH_SHORT).show();
-                    }
-                    else
-                        sw_crowded.setClickable(true);
-                    Graph.Node finalNode = node;
-                    sw_available.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-                        @Override
-                        public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                            if (sw_available.isChecked()) {
-                                dialog.dismiss();
-                                loadingDialog = new Dialog(MainActivity.this);
-                                loadingDialog.setContentView(R.layout.loading_dialog);
-                                TextView loadType = loadingDialog.findViewById(R.id.txt_loading);
-                                loadType.setText("Rimuovendo L'Ostacolo");
-                                loadingDialog.show();
-                                for (Coordinate coord: unavailablePoints) {
-                                    if(Math.abs(coord.getX() - finalNode.getX()) < 220 && Math.abs(coord.getY() - finalNode.getY()) < 220) {
-                                        unavailablePoints.remove(coord);
-                                        updateAvailability(coord.getX(), coord.getY(), 110, true);
-                                        loadingDismiss = false;
-                                        break;
-                                    }
-                                }
-                            } else {
-                                finalNode.setAvailability("unavailable");
-                                dialog.dismiss();
-                                loadingDialog = new Dialog(MainActivity.this);
-                                loadingDialog.setContentView(R.layout.loading_dialog);
-                                loadingDialog.setContentView(R.layout.loading_dialog);
-                                TextView loadType = loadingDialog.findViewById(R.id.txt_loading);
-                                loadType.setText("Aggiungendo L'Ostacolo");
-                                loadingDialog.show();
-                                updateAvailability((long) finalNode.getX(), (long) finalNode.getY(), 110, false);
-                                unavailablePoints.add(new Coordinate((int) finalNode.getX(), (int) finalNode.getY(), floor));
-                                if(startPoint.getText().toString() != null &&
-                                        endPoint.getText().toString() != null && path != null){
-                                    if (floor) {
-                                        path = graph2.findShortestPathAStar(startPoint.getText().toString(),
-                                                endPoint.getText().toString(), stairs, available, crowd, floor);
-                                    }
-                                    else{
-                                        path = graph1.findShortestPathAStar(startPoint.getText().toString(),
-                                                endPoint.getText().toString(), stairs, available, crowd, floor);
-                                    }
-                                }
-                                loadingDismiss = false;
-                            }
-                        }
-                    });
-
-                    Graph.Node finalNode1 = node;
-                    sw_crowded.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-                        @Override
-                        public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                            if (!sw_crowded.isChecked()) {
-                                dialog.dismiss();
-                                loadingDialog = new Dialog(MainActivity.this);
-                                loadingDialog.setContentView(R.layout.loading_dialog);
-                                TextView loadType = loadingDialog.findViewById(R.id.txt_loading);
-                                loadType.setText("Rimuovendo L'Affollamento");
-                                loadingDialog.show();
-                                for (Coordinate coord: crowdedPoints) {
-                                    if(Math.abs(coord.getX() - finalNode1.getX()) < 220 && Math.abs(coord.getY() - finalNode1.getY()) < 220) {
-                                        crowdedPoints.remove(coord);
-                                        updateSelfCrowd(coord.getX(), coord.getY(), 110, true);
-                                        loadingDismiss = false;
-                                        break;
-                                    }
-                                }
-                            } else {
-                                //node.setCrowdness("crowded");
-                                dialog.dismiss();
-                                loadingDialog = new Dialog(MainActivity.this);
-                                loadingDialog.setContentView(R.layout.loading_dialog);
-                                loadingDialog.setContentView(R.layout.loading_dialog);
-                                TextView loadType = loadingDialog.findViewById(R.id.txt_loading);
-                                loadType.setText("Aggiungendo L'Affollamento");
-                                loadingDialog.show();
-                                updateSelfCrowd((long) finalNode1.getX(), (long) finalNode1.getY(), 110, false);
-                                crowdedPoints.add(new Coordinate((int) finalNode1.getX(), (int) finalNode1.getY(), floor));
-                                if(startPoint.getText().toString() != null &&
-                                        endPoint.getText().toString() != null && path != null){
-                                    path = graph.findShortestPathAStar(startPoint.getText().toString(),
-                                            endPoint.getText().toString(), stairs, available, crowd, floor);
-                                }
-                                loadingDismiss = false;
-                            }
-                        }
-                    });
-
-                    // Mostra il dialog
-                    dialog.show();
                 }
             }
         });

@@ -2,7 +2,6 @@ package com.example.indoornavigation;
 
 import android.graphics.Bitmap;
 import android.util.Log;
-import android.widget.Toast;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -331,10 +330,10 @@ public class Graph {
             String nearestStaircaseNode = "";
             // Find the nearest node with roomType "staircase" from the start
             if(!roomType.equals("stairs")) {
-                nearestStaircaseNode = findNearestStaircaseNode(start, crowd, available);
+                nearestStaircaseNode = findNearestStaircaseNode(start, crowd, available, roomType);
             }
             else {
-                nearestStaircaseNode = findNearestElevatorNode(start, crowd, available);
+                nearestStaircaseNode = findNearestElevatorNode(start, crowd, available, roomType);
             }
             end = nearestStaircaseNode; // Update end to the nearest staircase node
         }
@@ -420,20 +419,26 @@ public class Graph {
         boolean roomTypeSatisfied = currentNode.getRoomType().equals(roomType);
         boolean availableSatisfied = currentNode.getAvailability().equals(available);
         boolean crowdSatisfied = currentNode.getCrowdness().equals(crowd);
-        boolean roomTypeStaircaseSatisfied = currentNode.getRoomType().equals("staircase");
-        boolean roomTypeElevatorSatisfied = currentNode.getRoomType().equals("elevator");
+        //boolean roomTypeStaircaseSatisfied = currentNode.getRoomType().equals("staircase");
+        //boolean roomTypeElevatorSatisfied = currentNode.getRoomType().equals("elevator");
         //Log.d("crowd", ""+crowdSatisfied);
 
         double penalty = 0.0;
-        if (roomTypeSatisfied || availableSatisfied || crowdSatisfied || roomTypeStaircaseSatisfied || roomTypeElevatorSatisfied) {
-            penalty = 2000000.0; // Apply a penalty if constraints are not satisfied
+        if (roomTypeSatisfied || availableSatisfied || crowdSatisfied /*|| roomTypeStaircaseSatisfied || roomTypeElevatorSatisfied*/) {
+            penalty = 2.0; // Apply a penalty if constraints are not satisfied
             Log.d("crowd", ""+penalty);
         }
 
-        return xDistance + yDistance + penalty;
+        double heuristic = 0;
+        if (xDistance + yDistance < Math.sqrt(xDistance * xDistance + yDistance * yDistance))
+            heuristic = xDistance + yDistance;
+        else
+            heuristic = Math.sqrt(xDistance * xDistance + yDistance * yDistance);
+
+        return heuristic + penalty;
     }
 
-    private String findNearestStaircaseNode(String start, String crowd, String available) {
+    private String findNearestStaircaseNode(String start, String crowd, String available, String roomType) {
         double shortestDistance = Double.POSITIVE_INFINITY;
         double shortestDistanceWithCrowdness = Double.POSITIVE_INFINITY;
         double shortestDistanceWithObstacle = Double.POSITIVE_INFINITY;
@@ -444,108 +449,50 @@ public class Graph {
         for (String nodeId : nodes.keySet()) {
             Node node = nodes.get(nodeId);
             if (node.getRoomType().equals("stairs") || node.getRoomType().equals("elevatorDoor")) {
-                double distance = calculateDistance(start, nodeId);
-                double distanceWithCrowdness = distance;
-                double distanceWithObstacle = distance;
-                if (distance < shortestDistance && !node.getCrowdness().equals("crowded") && node.getAvailability().equals("available")) {
-                    shortestDistance = distance;
-                    nearestStaircaseNode = nodeId;
-                }
-                if (distanceWithCrowdness < shortestDistanceWithCrowdness && (node.getCrowdness().equals("crowded"))) {
-                    shortestDistanceWithCrowdness = distanceWithCrowdness;
-                    nearestStaircaseNodeWithCrowdness = nodeId;
-                }
-                if (distanceWithObstacle < shortestDistanceWithObstacle && !node.getAvailability().equals("available")) {
-                    shortestDistanceWithObstacle = distanceWithObstacle;
-                    nearestStaircaseNodeWithObstacle = nodeId;
+                double distance = calculateDistance(start, nodeId, crowd, available, roomType);
+                if (distance < shortestDistance /*&& !node.getCrowdness().equals("crowded") && node.getAvailability().equals("available")*/) {
+                    if (node.getCrowdness().equals(crowd) || node.getAvailability().equals(available)) {
+
+                    }
+                    else {
+                        shortestDistance = distance;
+                        nearestStaircaseNode = nodeId;
+                    }
                 }
             }
-        }
-
-        if (shortestDistance == Double.POSITIVE_INFINITY) {
-            if (shortestDistanceWithCrowdness == Double.POSITIVE_INFINITY)
-                nearestStaircaseNode = nearestStaircaseNodeWithObstacle;
-            else
-                if (shortestDistanceWithObstacle == Double.POSITIVE_INFINITY)
-                    nearestStaircaseNode = nearestStaircaseNodeWithCrowdness;
-                else if (shortestDistanceWithObstacle < shortestDistanceWithCrowdness)
-                    nearestStaircaseNode = nearestStaircaseNodeWithObstacle;
-                else
-                    nearestStaircaseNode = nearestStaircaseNodeWithCrowdness;
-        }
-
-        if (shortestDistanceWithCrowdness <= shortestDistance && crowd.equals("")) {
-            if (shortestDistanceWithObstacle < shortestDistanceWithCrowdness && available.equals(""))
-                nearestStaircaseNode = nearestStaircaseNodeWithObstacle;
-            else
-                nearestStaircaseNode = nearestStaircaseNodeWithCrowdness;
         }
 
         return nearestStaircaseNode;
     }
 
-    private String findNearestElevatorNode(String start, String crowd, String available) {
+    private String findNearestElevatorNode(String start, String crowd, String available, String roomType) {
         double shortestDistance = Double.POSITIVE_INFINITY;
-        double shortestDistanceWithCrowdness = Double.POSITIVE_INFINITY;
-        double shortestDistanceWithObstacle = Double.POSITIVE_INFINITY;
         String nearestStaircaseNode = null;
-        String nearestStaircaseNodeWithCrowdness = null;
-        String nearestStaircaseNodeWithObstacle = null;
 
         for (String nodeId : nodes.keySet()) {
             Node node = nodes.get(nodeId);
             if (node.getRoomType().equals("elevatorDoor")) {
-                double distance = calculateDistance(start, nodeId);
-                double distanceWithCrowdness = calculateDistance(start, nodeId);
-                double distanceWithObstacle = calculateDistance(start, nodeId);
-                if (distance < shortestDistance && !node.getCrowdness().equals("crowded") && node.getAvailability().equals("available")) {
-                    Log.d("prova9", "a"+available);
-                    shortestDistance = distance;
-                    nearestStaircaseNode = nodeId;
-                }
-                if (distanceWithCrowdness < shortestDistanceWithCrowdness && node.getCrowdness().equals("crowded")) {
-                    shortestDistanceWithCrowdness = distance;
-                    nearestStaircaseNodeWithCrowdness = nodeId;
-                }
-                if (distanceWithObstacle < shortestDistanceWithObstacle && !node.getAvailability().equals("available")) {
-                    shortestDistanceWithObstacle = distance;
-                    nearestStaircaseNodeWithObstacle = nodeId;
+                double distance = calculateDistance(start, nodeId, crowd, available, roomType);
+                if (distance < shortestDistance /*&& !node.getCrowdness().equals("crowded") && node.getAvailability().equals("available")*/) {
+                    if (node.getCrowdness().equals(crowd) || node.getAvailability().equals(available)) {
+
+                    }
+                    else {
+                        shortestDistance = distance;
+                        nearestStaircaseNode = nodeId;
+                    }
                 }
             }
         }
-
-        nearestStaircaseNode = nearestStaircaseNodeWithObstacle;
-        /*if (shortestDistance == Double.POSITIVE_INFINITY) {
-            if (shortestDistanceWithCrowdness == Double.POSITIVE_INFINITY)
-                nearestStaircaseNode = nearestStaircaseNodeWithObstacle;
-            else {
-                if (shortestDistanceWithObstacle == Double.POSITIVE_INFINITY)
-                    nearestStaircaseNode = nearestStaircaseNodeWithCrowdness;
-                else if (shortestDistanceWithObstacle < shortestDistanceWithCrowdness)
-                    nearestStaircaseNode = nearestStaircaseNodeWithObstacle;
-                else
-                    nearestStaircaseNode = nearestStaircaseNodeWithCrowdness;
-            }
-        }
-
-        if (shortestDistanceWithCrowdness <= shortestDistance && crowd.equals("")) {
-            if (shortestDistanceWithObstacle < shortestDistanceWithCrowdness && available.equals(""))
-                nearestStaircaseNode = nearestStaircaseNodeWithObstacle;
-            else
-                nearestStaircaseNode = nearestStaircaseNodeWithCrowdness;
-        } */
 
         return nearestStaircaseNode;
     }
 
-    private double calculateDistance(String node1Id, String node2Id) {
-        Node node1 = nodes.get(node1Id);
-        Node node2 = nodes.get(node2Id);
+    private double calculateDistance(String node1Id, String node2Id, String crowd, String available, String roomType) {
 
-        double xDistance = Math.abs(node1.getX() - node2.getX());
-        double yDistance = Math.abs(node1.getY() - node2.getY());
+        List<Node> path = findShortestPathAStar(node1Id, node2Id, roomType, available, crowd, false);
 
-        return Math.sqrt(xDistance * xDistance + yDistance * yDistance);
+        return path.size();
     }
 
     /**
