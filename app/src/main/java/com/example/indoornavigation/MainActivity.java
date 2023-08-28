@@ -660,9 +660,9 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 startTime = System.currentTimeMillis();
                 try {
                     if(floor)
-                        path = graph2.findShortestPathAStar(startPoint.getText().toString(), endPoint.getText().toString(), stairs, "", crowd, floor);
+                        path = graph2.findShortestPathAStar(startPoint.getText().toString(), endPoint.getText().toString(), stairs, available, crowd, floor);
                     else
-                        path = graph1.findShortestPathAStar(startPoint.getText().toString(), endPoint.getText().toString(), stairs, "", crowd, floor);
+                        path = graph1.findShortestPathAStar(startPoint.getText().toString(), endPoint.getText().toString(), stairs, available, crowd, floor);
                 } catch (Exception e) {
                     //
                 }

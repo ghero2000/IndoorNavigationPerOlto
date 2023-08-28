@@ -2,6 +2,7 @@ package com.example.indoornavigation;
 
 import android.graphics.Bitmap;
 import android.util.Log;
+import android.widget.Toast;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -451,7 +452,7 @@ public class Graph {
             if (node.getRoomType().equals("stairs") || node.getRoomType().equals("elevatorDoor")) {
                 double distance = calculateDistance(start, nodeId, crowd, available, roomType);
                 if (distance < shortestDistance /*&& !node.getCrowdness().equals("crowded") && node.getAvailability().equals("available")*/) {
-                    if (node.getCrowdness().equals(crowd) || node.getAvailability().equals(available)) {
+                    if (node.getCrowdness() == crowd || node.getAvailability() == available) {
 
                     }
                     else {
