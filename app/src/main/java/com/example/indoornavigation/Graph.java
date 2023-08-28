@@ -420,23 +420,17 @@ public class Graph {
         boolean roomTypeSatisfied = currentNode.getRoomType().equals(roomType);
         boolean availableSatisfied = currentNode.getAvailability().equals(available);
         boolean crowdSatisfied = currentNode.getCrowdness().equals(crowd);
-        //boolean roomTypeStaircaseSatisfied = currentNode.getRoomType().equals("staircase");
-        //boolean roomTypeElevatorSatisfied = currentNode.getRoomType().equals("elevator");
+        boolean roomTypeStaircaseSatisfied = currentNode.getRoomType().equals("staircase");
+        boolean roomTypeElevatorSatisfied = currentNode.getRoomType().equals("elevator");
         //Log.d("crowd", ""+crowdSatisfied);
 
         double penalty = 0.0;
-        if (roomTypeSatisfied || availableSatisfied || crowdSatisfied /*|| roomTypeStaircaseSatisfied || roomTypeElevatorSatisfied*/) {
-            penalty = 2.0; // Apply a penalty if constraints are not satisfied
+        if (roomTypeSatisfied || availableSatisfied || crowdSatisfied || roomTypeStaircaseSatisfied || roomTypeElevatorSatisfied) {
+            penalty = 2000000000.0; // Apply a penalty if constraints are not satisfied
             Log.d("crowd", ""+penalty);
         }
 
-        double heuristic = 0;
-        if (xDistance + yDistance < Math.sqrt(xDistance * xDistance + yDistance * yDistance))
-            heuristic = xDistance + yDistance;
-        else
-            heuristic = Math.sqrt(xDistance * xDistance + yDistance * yDistance);
-
-        return heuristic + penalty;
+        return xDistance + yDistance + penalty;
     }
 
     private String findNearestStaircaseNode(String start, String crowd, String available, String roomType) {

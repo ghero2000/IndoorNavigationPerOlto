@@ -500,7 +500,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                     graph1.getNode(x+"-"+y).setRoomType("staircase");
                     graphBackup1.getNode(x+"-"+y).setRoomType("staircase");
                 }
-                if (x >= 2075 && x <= 2275 && y >= 1870 && y <= 1980) {
+                if (x >= 2045 && x <= 2275 && y >= 1780 && y <= 1980) {
                     graph1.getNode(x+"-"+y).setRoomType("elevator");
                     graphBackup1.getNode(x+"-"+y).setRoomType("elevator");
                 }
@@ -1023,7 +1023,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                             graph2.getNode("A"+x+"-"+y).setRoomType("staircase");
                             graphBackup2.getNode("A"+x+"-"+y).setRoomType("staircase");
                         }
-                        if (x >= 2075 && x <= 2275 && y >= 1870 && y <= 2090) {
+                        if (x >= 2045 && x <= 2275 && y >= 1730 && y <= 2090) {
                             graph2.getNode("A"+x+"-"+y).setRoomType("elevator");
                             graphBackup2.getNode("A"+x+"-"+y).setRoomType("elevator");
                         }
