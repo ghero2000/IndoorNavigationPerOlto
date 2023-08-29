@@ -2,7 +2,6 @@ package com.example.indoornavigation;
 
 import android.graphics.Bitmap;
 import android.util.Log;
-import android.widget.Toast;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -327,17 +326,20 @@ public class Graph {
         openSet.add(start);
         gScore.put(start, 0.0);
 
+        //------------------ trova il metodo più veloce per cambiare piano-------------------------
         if ((end.equals("Secondo Piano") && !floor) || (end.equals("Primo Piano") && floor)) {
-            String nearestStaircaseNode = "";
+            List<Node> nearestToFloorPath = new ArrayList<>();
             // Find the nearest node with roomType "staircase" from the start
             if(!roomType.equals("stairs")) {
-                nearestStaircaseNode = findNearestStaircaseNode(start, crowd, available, roomType);
+                nearestToFloorPath = findNearestStaircaseNode(start, crowd, available, roomType);
             }
             else {
-                nearestStaircaseNode = findNearestElevatorNode(start, crowd, available, roomType);
+                nearestToFloorPath = findNearestElevatorNode(start, crowd, available, roomType);
             }
-            end = nearestStaircaseNode; // Update end to the nearest staircase node
+
+            return nearestToFloorPath;
         }
+        //-----------------------------------------------------------------------------------------
 
         fScore.put(start, calculateHeuristic(start, end, roomType, available, crowd));
 
@@ -427,67 +429,62 @@ public class Graph {
         double penalty = 0.0;
         if (roomTypeSatisfied || availableSatisfied || crowdSatisfied || roomTypeStaircaseSatisfied || roomTypeElevatorSatisfied) {
             penalty = 2000000000.0; // Apply a penalty if constraints are not satisfied
-            Log.d("crowd", ""+penalty);
         }
 
         return xDistance + yDistance + penalty;
     }
 
-    private String findNearestStaircaseNode(String start, String crowd, String available, String roomType) {
+    private List<Node> findNearestStaircaseNode(String start, String crowd, String available, String roomType) {
         double shortestDistance = Double.POSITIVE_INFINITY;
-        double shortestDistanceWithCrowdness = Double.POSITIVE_INFINITY;
-        double shortestDistanceWithObstacle = Double.POSITIVE_INFINITY;
-        String nearestStaircaseNode = null;
-        String nearestStaircaseNodeWithCrowdness = null;
-        String nearestStaircaseNodeWithObstacle = null;
+        List<Node> nearestToFloorPath = new ArrayList<>();
 
         for (String nodeId : nodes.keySet()) {
             Node node = nodes.get(nodeId);
             if (node.getRoomType().equals("stairs") || node.getRoomType().equals("elevatorDoor")) {
-                double distance = calculateDistance(start, nodeId, crowd, available, roomType);
-                if (distance < shortestDistance /*&& !node.getCrowdness().equals("crowded") && node.getAvailability().equals("available")*/) {
+                List<Node> pathToFloor = calculatePathToFloor(start, nodeId, crowd, available, roomType);
+                if (pathToFloor.size() < shortestDistance /*&& !node.getCrowdness().equals("crowded") && node.getAvailability().equals("available")*/) {
                     if (node.getCrowdness() == crowd || node.getAvailability() == available) {
 
                     }
                     else {
-                        shortestDistance = distance;
-                        nearestStaircaseNode = nodeId;
+                        shortestDistance = pathToFloor.size();
+                        nearestToFloorPath = pathToFloor;
                     }
                 }
             }
         }
 
-        return nearestStaircaseNode;
+        return nearestToFloorPath;
     }
 
-    private String findNearestElevatorNode(String start, String crowd, String available, String roomType) {
+    private List<Node> findNearestElevatorNode(String start, String crowd, String available, String roomType) {
         double shortestDistance = Double.POSITIVE_INFINITY;
-        String nearestStaircaseNode = null;
+        List<Node> shortestToFloorPath = new ArrayList<>();
 
         for (String nodeId : nodes.keySet()) {
             Node node = nodes.get(nodeId);
             if (node.getRoomType().equals("elevatorDoor")) {
-                double distance = calculateDistance(start, nodeId, crowd, available, roomType);
-                if (distance < shortestDistance /*&& !node.getCrowdness().equals("crowded") && node.getAvailability().equals("available")*/) {
+                List<Node> pathToFloor = calculatePathToFloor(start, nodeId, crowd, available, roomType);
+                if (pathToFloor.size() < shortestDistance /*&& !node.getCrowdness().equals("crowded") && node.getAvailability().equals("available")*/) {
                     if (node.getCrowdness().equals(crowd) || node.getAvailability().equals(available)) {
 
                     }
                     else {
-                        shortestDistance = distance;
-                        nearestStaircaseNode = nodeId;
+                        shortestDistance = pathToFloor.size();
+                        shortestToFloorPath = pathToFloor;
                     }
                 }
             }
         }
 
-        return nearestStaircaseNode;
+        return shortestToFloorPath;
     }
 
-    private double calculateDistance(String node1Id, String node2Id, String crowd, String available, String roomType) {
+    private List<Node> calculatePathToFloor(String node1Id, String node2Id, String crowd, String available, String roomType) {
 
         List<Node> path = findShortestPathAStar(node1Id, node2Id, roomType, available, crowd, false);
 
-        return path.size();
+        return path;
     }
 
     /**

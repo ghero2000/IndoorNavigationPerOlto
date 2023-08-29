@@ -2029,7 +2029,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         }
     } */
 
-
     @Override
     public void onSensorChanged(SensorEvent event) {
         final float alpha = 0.97f;
